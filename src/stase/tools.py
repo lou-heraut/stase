@@ -108,16 +108,29 @@ def getAR1Correction(Z):
     return {"lag1": lag1, "correction": correction}
 
 
-def randomizedNormalScore(x):
+def randomizedNormalScore(x, rng=None):
     """Randomized normal-score transformation (handles ties and NaN).
 
     Replicates R's rank(x, ties.method="random", na.last="keep") / (1+n_valid).
     NaN positions are preserved as NaN in the output.
 
-    Note: with ties.method="random" the ranking within tied groups is
-    non-deterministic.  For continuous data (no ties) the result is
-    fully deterministic and matches R exactly.
+    Parameters
+    ----------
+    x   : array-like
+    rng : None | int | numpy.random.Generator
+        Source of randomness for tie-breaking. None (default) draws a
+        fresh non-deterministic generator — same statistical behaviour
+        as R's ties.method="random", but without touching numpy's
+        global random state. Pass an int (seed) or a Generator for
+        reproducible results.
+
+    Note: the tie randomization is an implementation choice inherited
+    from tools.R (Hamed 2008 does not specify tie handling at the
+    normal-score step — see the R docstring). For continuous data
+    (no ties) the result is fully deterministic and matches R exactly,
+    whatever `rng`.
     """
+    rng = np.random.default_rng(rng)
     x = np.asarray(x, dtype=float)
     n_valid = int(np.sum(~np.isnan(x)))
     z = np.full_like(x, np.nan)
@@ -132,7 +145,7 @@ def randomizedNormalScore(x):
         group_mask = inverse == idx
         sz = int(np.sum(group_mask))
         group_ranks = np.arange(base + 1, base + sz + 1, dtype=float)
-        np.random.shuffle(group_ranks)
+        rng.shuffle(group_ranks)
         ranks[group_mask] = group_ranks
         base += sz
 
@@ -177,7 +190,7 @@ def HurstLkh(H, x):
     return float(L)
 
 
-def estimateHurst(Z, do_detrending=True, trend=None):
+def estimateHurst(Z, do_detrending=True, trend=None, rng=None):
     """Estimate the Hurst coefficient by MLE.
 
     Parameters
@@ -185,6 +198,9 @@ def estimateHurst(Z, do_detrending=True, trend=None):
     Z  : array-like  — full series (NaN allowed for gapped data)
     do_detrending : bool
     trend : float or None  — pre-computed Sen slope (None → compute)
+    rng : None | int | numpy.random.Generator — tie-breaking randomness
+        (see randomizedNormalScore); only matters when the detrended
+        series contains ties.
     """
     Z = np.asarray(Z, dtype=float)
     n = len(Z)
@@ -196,7 +212,7 @@ def estimateHurst(Z, do_detrending=True, trend=None):
     else:
         Y = Z.copy()
 
-    W = randomizedNormalScore(Y)
+    W = randomizedNormalScore(Y, rng=rng)
 
     result = scipy_optimize.minimize_scalar(
         lambda H: -HurstLkh(H, W),
@@ -231,11 +247,18 @@ def _ltp_variance_naive(C, n):
     return var0
 
 
-def _ltp_variance_vectorized(C, n):
+def _ltp_variance_vectorized(C, n, block_elems=2 ** 24):
     """Vectorized O(M^2) version of the 4-level LTP loop (M = n*(n-1)/2).
 
     Produces results identical to _ltp_variance_naive within floating-point
-    precision (verified in compare_trend.py).
+    precision (verified by tests/test_tools.py).
+
+    The M×M computation is evaluated by row blocks of at most
+    `block_elems` elements so memory stays bounded (~a few hundred MB)
+    whatever n — the full M×M matrices would need (n(n-1)/2)^2 floats,
+    i.e. >3 GB from n≈200. Same sum, block by block; for the usual
+    annual series (n ≤ ~90) a single block is used and the computation
+    is identical to the previous non-blocked version.
     """
     if n < 2:
         return 0.0
@@ -246,22 +269,28 @@ def _ltp_variance_vectorized(C, n):
     lags_ij = j_arr - i_arr                  # always > 0
     d = (2.0 - 2.0 * C[lags_ij]).astype(float)  # denominator factor per pair
 
-    # Broadcast to M×M
-    J = j_arr[:, None]   # (M, 1)
-    I = i_arr[:, None]   # (M, 1)
     L = j_arr[None, :]   # (1, M)   — second pair uses same (j,i) set as (l,k)
     K = i_arr[None, :]   # (1, M)
 
-    num = (C[np.abs(J - L).ravel()].reshape(M, M)
-           - C[np.abs(I - L).ravel()].reshape(M, M)
-           - C[np.abs(J - K).ravel()].reshape(M, M)
-           + C[np.abs(I - K).ravel()].reshape(M, M))
+    block = max(1, int(block_elems) // M)
+    total = 0.0
+    for s in range(0, M, block):
+        e = min(s + block, M)
+        J = j_arr[s:e, None]   # (b, 1)
+        I = i_arr[s:e, None]   # (b, 1)
 
-    den = np.sqrt(d[:, None] * d[None, :])
+        num = (C[np.abs(J - L)]
+               - C[np.abs(I - L)]
+               - C[np.abs(J - K)]
+               + C[np.abs(I - K)])
 
-    # Clip to [-1, 1] to guard against tiny floating-point overflows in arcsin
-    ratio = np.clip(num / den, -1.0, 1.0)
-    return float(np.sum(np.arcsin(ratio)))
+        den = np.sqrt(d[s:e, None] * d[None, :])
+
+        # Clip to [-1, 1] to guard against tiny floating-point overflows
+        # in arcsin
+        ratio = np.clip(num / den, -1.0, 1.0)
+        total += float(np.sum(np.arcsin(ratio)))
+    return total
 
 
 # Public alias — use vectorized by default
@@ -269,7 +298,7 @@ _ltp_variance = _ltp_variance_vectorized
 
 
 def generalMannKendall_hide(X, level=0.1, time_dependency_option='INDE',
-                             do_detrending=True, verbose=False):
+                             do_detrending=True, verbose=False, rng=None):
     """Core Mann-Kendall test (faithful Python port of generalMannKendall_hide).
 
     Parameters
@@ -334,7 +363,7 @@ def generalMannKendall_hide(X, level=0.1, time_dependency_option='INDE',
 
     # ── LTP ──────────────────────────────────────────────────────────────────
     else:  # LTP
-        Hu = estimateHurst(X, do_detrending, OUT["TREND"])
+        Hu = estimateHurst(X, do_detrending, OUT["TREND"], rng=rng)
         OUT["DEP"] = Hu
 
         # C[k] = 0.5*(|k+1|^{2H} - 2|k|^{2H} + |k-1|^{2H}), k = 0..n
@@ -386,16 +415,21 @@ def generalMannKendall_hide(X, level=0.1, time_dependency_option='INDE',
 
 def GeneralMannKendall(X, level=0.1, time_dependency_option='INDE',
                         do_detrending=True, show_advance_stat=False,
-                        verbose=False):
+                        verbose=False, rng=None):
     """Public wrapper — returns dict {level, H, p, a [, stat, dep]}.
 
     Mirrors R's GeneralMannKendall tibble output.
+
+    rng : None | int | numpy.random.Generator — LTP only : source du
+        tirage aléatoire des ex-æquo (cf. randomizedNormalScore). Sans
+        effet pour INDE/AR1 et pour les séries sans ex-æquo.
     """
     res = generalMannKendall_hide(
         X=X, level=level,
         time_dependency_option=time_dependency_option,
         do_detrending=do_detrending,
         verbose=verbose,
+        rng=rng,
     )
     out = {
         "level": level,

@@ -146,12 +146,30 @@ Ajouter `.pytest_cache/` au .gitignore.
 
 > **Décision utilisateur (2026-07-12)** : `tools.py` (cœur statistique
 > validé contre R : MK, Sen, Hurst, LTP, FDR) est **gelé** — aucune
-> modification de code. Les deux points relevés à l'audit (RNG global non
-> seedable dans `randomizedNormalScore` en cas d'ex-æquo ; mémoire du
-> calcul de variance LTP en O(M²) au-delà de n≈150) sont rétrogradés en
-> simples **notes de documentation** (docstring/README : « LTP :
-> non-déterministe avec ex-æquo, prévu pour des séries annuelles,
-> pas millénaires »), sans toucher au code.
+> modification de code, **à deux exceptions près, explicitement validées
+> par l'utilisateur plus tard le même jour** (« ça vaut le coup de le
+> faire marcher proprement ») :
+>
+> ✅ **LTP rendu reproductible et robuste (2026-07-12)** :
+> - `rng`/`seed` propagé `process_trend(seed=) → GeneralMannKendall →
+>   estimateHurst → randomizedNormalScore` (numpy Generator dédié — plus
+>   de pollution du RNG global). Défaut : non déterministe, comme R.
+>   Justification littérature : le tirage aléatoire des ex-æquo est un
+>   choix d'implémentation documenté DANS tools.R lui-même (« Hamed's
+>   paper is unclear on how to handle ties […] ties.method='random' »),
+>   pas une prescription de Hamed 2008 — le seed ne change pas la
+>   méthode, il fixe le tirage.
+> - variance LTP calculée par blocs de lignes (mémoire bornée ~130 Mo
+>   quel que soit n, même somme — un seul bloc pour n ≤ ~90 donc
+>   strictement identique au calcul précédent pour l'usage normal).
+> - garde-fous dans process_trend : warning si > 200 valeurs valides
+>   (O(n⁴)), warning si ex-æquo et seed=None.
+> - preuves : goldens LTP R inchangés, équivalence bloc/non-bloc à
+>   1e-12, équivalence vs boucle naïve, reproductibilité seed testée,
+>   non-pollution du RNG global testée.
+>
+> Toute autre modification de tools.py reste interdite sans accord
+> explicite.
 
 ### 3.3 Validation d'entrées complémentaires
 > ✅ **Fait (2026-07-12)** — format `MM-DD` validé (ValueError claire),

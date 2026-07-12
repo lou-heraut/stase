@@ -125,6 +125,72 @@ def test_fdr_mixed():
     ) == pytest.approx(0.07)
 
 
+# ── LTP : variance par blocs — équivalence exacte ────────────────────────────
+
+def _hurst_autocov(n, H):
+    lam = np.arange(n + 1, dtype=float)
+    return 0.5 * (np.abs(lam + 1) ** (2 * H)
+                  - 2 * np.abs(lam) ** (2 * H)
+                  + np.abs(lam - 1) ** (2 * H))
+
+
+@pytest.mark.parametrize("n,H", [(5, 0.6), (10, 0.75), (15, 0.8)])
+def test_ltp_variance_blocked_matches_naive(n, H):
+    from stase.tools import _ltp_variance_naive, _ltp_variance_vectorized
+    C = _hurst_autocov(n, H)
+    assert _ltp_variance_vectorized(C, n) == pytest.approx(
+        _ltp_variance_naive(C, n), abs=1e-10)
+
+
+@pytest.mark.parametrize("n", [8, 30, 60])
+def test_ltp_variance_block_size_invariant(n):
+    # forcer plusieurs blocs minuscules doit donner la même somme que le
+    # calcul en un seul bloc (mémoire bornée sans changer le résultat)
+    from stase.tools import _ltp_variance_vectorized
+    C = _hurst_autocov(n, 0.7)
+    full = _ltp_variance_vectorized(C, n)
+    tiny_blocks = _ltp_variance_vectorized(C, n, block_elems=64)
+    assert tiny_blocks == pytest.approx(full, rel=1e-12)
+
+
+# ── LTP : reproductibilité du tirage des ex-æquo ─────────────────────────────
+
+def _series_with_ties(n=40, seed=3):
+    rng = np.random.default_rng(seed)
+    x = np.round(rng.gamma(2.0, 5.0, n), 0)   # arrondi entier → ex-æquo
+    assert len(np.unique(x)) < n              # le test exige des ex-æquo
+    return x
+
+
+def test_ltp_seeded_is_reproducible_with_ties():
+    x = _series_with_ties()
+    r1 = GeneralMannKendall(x, time_dependency_option="LTP", rng=42)
+    r2 = GeneralMannKendall(x, time_dependency_option="LTP", rng=42)
+    assert r1 == r2
+    assert np.isfinite(r1["p"]) and 0.0 <= r1["p"] <= 1.0
+
+
+def test_ltp_rng_irrelevant_without_ties():
+    # sans ex-æquo, le tirage n'intervient pas : tous les rng équivalents
+    x = _series("trend_short")
+    assert len(np.unique(x)) == len(x)
+    r1 = GeneralMannKendall(x, time_dependency_option="LTP", rng=1)
+    r2 = GeneralMannKendall(x, time_dependency_option="LTP", rng=2)
+    r3 = GeneralMannKendall(x, time_dependency_option="LTP")
+    assert r1 == r2 == r3
+
+
+def test_ltp_does_not_touch_global_random_state():
+    # l'appel LTP (même avec ex-æquo) ne consomme plus le RNG global numpy
+    x = _series_with_ties()
+    np.random.seed(123)
+    expected = np.random.rand(3)
+    np.random.seed(123)
+    GeneralMannKendall(x, time_dependency_option="LTP")
+    got = np.random.rand(3)
+    np.testing.assert_array_equal(expected, got)
+
+
 # ── Cas limites GeneralMannKendall (comportements figés) ────────────────────
 
 def test_gmk_less_than_3_values():

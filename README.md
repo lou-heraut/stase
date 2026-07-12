@@ -61,10 +61,14 @@ moins de 3 valeurs valides), `p`, `a` (pente de Sen par pas de temps),
   (correction d'autocorrélation, Hamed & Rao 1998), `LTP` (persistance
   longue via coefficient de Hurst, Hamed 2008). Le cœur statistique est
   un port fidèle de tools.R, validé nombre à nombre contre R (goldens
-  dans `tests/data/`). Limites LTP : prévu pour des séries agrégées
-  (annuelles typiquement) — mémoire en O(n⁴) au-delà de n≈150 ; résultat
-  non déterministe en présence d'ex-æquo (transformation par rangs
-  aléatoires, comme en R).
+  dans `tests/data/`). Notes LTP : prévu pour des séries agrégées
+  (annuelles typiquement, n ≤ ~100 ; calcul en O(n⁴), warning au-delà de
+  200 valeurs, mémoire bornée par blocs). En présence d'ex-æquo, le
+  tirage aléatoire des rangs (ties.method='random', choix documenté de
+  tools.R — Hamed 2008 ne prescrit rien) rend le résultat non
+  déterministe : passer `seed=<int>` à `process_trend` pour des
+  résultats rejouables (sans effet sur les séries sans ex-æquo,
+  identiques à R).
 
 Les colonnes sont détectées par **type**, jamais par nom : datetime →
 dates, texte → identifiant de série, numérique → valeurs. Des codes de

@@ -42,7 +42,8 @@ _ID_SEP = "\x1f"
 
 # ── Per-series helpers ───────────────────────────────────────────────────────
 
-def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm):
+def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm,
+               rng=None):
     """MK test + intercept b + period range + normalised slope for one series."""
     grp = grp.sort_values(date_col)
     X = grp[var].values.astype(float)
@@ -54,6 +55,7 @@ def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm)
         time_dependency_option=option,
         do_detrending=True,
         show_advance_stat=show_advance_stat,
+        rng=rng,
     )
 
     # Intercept: b = mean(X) - mu_t * a
@@ -185,6 +187,7 @@ def process_trend(
     period_change=None,
     extreme_prob=0.01,
     show_advance_stat=False,
+    seed=None,
     verbose=False,
 ):
     """Run Mann-Kendall + Sen-Theil trend analysis on process_extraction output.
@@ -226,6 +229,13 @@ def process_trend(
         Probability for extreme quantile bounds (default 0.01).
     show_advance_stat : bool
         If True, include 'stat' and 'dep' columns in the output.
+    seed : int | None
+        LTP uniquement : graine du tirage aléatoire utilisé pour
+        départager les ex-æquo lors de l'estimation du coefficient de
+        Hurst (héritage de tools.R, ties.method='random'). None (défaut) :
+        tirage non déterministe, comme en R. Un entier rend l'appel
+        entièrement reproductible pour des données identiques. Sans effet
+        pour INDE/AR1 et pour des séries sans ex-æquo.
     verbose : bool
         Print progress to stdout.
 
@@ -438,6 +448,39 @@ def process_trend(
                 for pc in period_change
             ]
 
+    # ── 7bis. Garde-fous LTP ──────────────────────────────────────────────────
+    _rng = None
+    if time_dependency_option == "LTP":
+        _rng = np.random.default_rng(seed)
+        # séries longues : le calcul de variance LTP est en O(n⁴)
+        # (mémoire bornée par blocs, mais temps de calcul important)
+        _n_max = int(dataEX.groupby(id_col, observed=True)[var_cols]
+                     .count().max().max())
+        if _n_max > 200:
+            warnings.warn(
+                f"LTP avec des séries de {_n_max} valeurs : le calcul de "
+                "variance est en O(n⁴) — temps potentiellement très long. "
+                "LTP est prévu pour des séries agrégées (annuelles "
+                "typiquement, n ≤ ~100).",
+                UserWarning,
+            )
+        # ex-æquo sans seed : résultats non reproductibles
+        if seed is None:
+            _has_ties = any(
+                dataEX[[id_col, v]].dropna(subset=[v])
+                .duplicated([id_col, v]).any()
+                for v in var_cols
+            )
+            if _has_ties:
+                warnings.warn(
+                    "LTP : des ex-æquo sont présents dans les séries — le "
+                    "tirage aléatoire des rangs (ties.method='random', "
+                    "hérité de tools.R) rend les résultats non "
+                    "reproductibles d'un appel à l'autre. Passez seed=<int> "
+                    "pour des résultats rejouables.",
+                    UserWarning,
+                )
+
     # ── 8. Main loop ──────────────────────────────────────────────────────────
     if verbose:
         n_st = dataEX[id_col].nunique()
@@ -496,6 +539,7 @@ def process_trend(
                     option=time_dependency_option,
                     show_advance_stat=show_advance_stat,
                     to_norm=to_norm,
+                    rng=_rng,
                     include_groups=False,
                 )
                 .reset_index()

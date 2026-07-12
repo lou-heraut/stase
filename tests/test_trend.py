@@ -151,6 +151,34 @@ def test_multiple_id_columns_with_underscore_roundtrip():
     assert list(t.columns[:2]) == ["ID", "model"]
 
 
+def test_ltp_seed_reproducible_end_to_end():
+    # données arrondies → ex-æquo ; seed fixe → process_trend rejouable
+    data = _yearly(slope=0.2, n=35)
+    data["X"] = data["X"].round(0)
+    with pytest.warns(UserWarning, match="ex-æquo"):
+        t_noseed = process_trend(data, time_dependency_option="LTP",
+                                 verbose=False)
+    assert len(t_noseed) == 1
+    t1 = process_trend(data, time_dependency_option="LTP", seed=7,
+                       verbose=False)
+    t2 = process_trend(data, time_dependency_option="LTP", seed=7,
+                       verbose=False)
+    pd.testing.assert_frame_equal(t1, t2)
+
+
+def test_ltp_long_series_warns():
+    # 210 valeurs valides > seuil 200 → warning (le calcul aboutit quand
+    # même : mémoire bornée par blocs, ~2 s)
+    dates = pd.date_range("1990-01-01", periods=210, freq="D")
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame({"ID": "S1", "Date": dates,
+                         "X": rng.normal(10, 1, 210)})
+    with pytest.warns(UserWarning, match="O\\(n⁴\\)"):
+        t = process_trend(data, time_dependency_option="LTP",
+                          seed=1, verbose=False)
+    assert np.isfinite(t.p.iloc[0])
+
+
 def test_period_trend_outside_data_returns_typed_empty():
     with pytest.warns(UserWarning):
         t = process_trend(_yearly(), period_trend=["2050-01-01", "2060-12-31"],
