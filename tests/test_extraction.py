@@ -71,7 +71,7 @@ def test_adaptive_starts_at_max_month():
                            sampling_period=Adaptive(np.nanmax, "Q"))
     starts = {sid: r[r.id == sid].Date.dt.strftime("%m-%d").iloc[0]
               for sid in ("S1", "S2")}
-    # les deux stations n'ont pas le même mois de départ
+    # les deux séries n'ont pas le même mois de départ
     assert starts["S1"] != starts["S2"]
     assert all(s.endswith("-01") for s in starts.values())
 

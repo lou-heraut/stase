@@ -16,8 +16,8 @@
 """
 EXstat — process_trend (faithful Python conversion of process_trend.R)
 
-Takes the output of process_extraction (one row per station×date) and runs
-Mann-Kendall + Sen-Theil per station and per variable.
+Takes the output of process_extraction (one row per series×date) and runs
+Mann-Kendall + Sen-Theil per series and per variable.
 
 Usage
 -----
@@ -44,10 +44,10 @@ def _verbose_box(title: str, rows: list, width: int = 66) -> None:
     print("└" + "─" * inner + "┘")
 
 
-# ── Per-station helpers ───────────────────────────────────────────────────────
+# ── Per-series helpers ───────────────────────────────────────────────────────
 
-def _mk_station(grp, var, date_col, MK_level, option, show_advance_stat, to_norm):
-    """MK test + intercept b + period range + normalised slope for one station."""
+def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm):
+    """MK test + intercept b + period range + normalised slope for one series."""
     grp = grp.sort_values(date_col)
     X = grp[var].values.astype(float)
     dates_ns = grp[date_col].values
@@ -106,8 +106,8 @@ def _mk_station(grp, var, date_col, MK_level, option, show_advance_stat, to_norm
     return pd.Series(out)
 
 
-def _change_station(grp, var, date_col, period_change, to_norm):
-    """Mean change between two periods for one station."""
+def _change_series(grp, var, date_col, period_change, to_norm):
+    """Mean change between two periods for one series."""
     grp = grp.sort_values(date_col)
     dates = grp[date_col]
     X = grp[var].values.astype(float)
@@ -164,7 +164,7 @@ def process_trend(
     Parameters
     ----------
     dataEX : DataFrame
-        Output of process_extraction — one row per (station, date), numeric columns
+        Output of process_extraction — one row per (series, date), numeric columns
         are the variables to analyse.
     MK_level : float
         Significance level for the Mann-Kendall test (default 0.1).
@@ -182,10 +182,10 @@ def process_trend(
         Metadata table with columns {'variable_en', 'to_normalise'} overriding
         to_normalise when provided.
     extreme_take_not_signif_into_account : bool
-        If False, only significant stations (H=True) contribute to the
+        If False, only significant series (H=True) contribute to the
         a_normalise quantile bounds.
     extreme_take_only_series : list | None
-        Subset of station IDs to use for quantile computation (None = all).
+        Subset of series IDs to use for quantile computation (None = all).
     extreme_by_suffix : bool
         If True, quantiles are grouped by full variable name; if False, by
         the suffix-stripped base name.
@@ -295,7 +295,7 @@ def process_trend(
         dataEX = dataEX.drop(columns=id_cols)
         id_col = "_ID_united"
 
-    # Check date uniqueness per station
+    # Check date uniqueness per series
     dup_check = dataEX.groupby(id_col)[date_col].apply(
         lambda s: s.duplicated().any()
     )
@@ -446,12 +446,12 @@ def process_trend(
             var_no_suffix = _strip_suffix(var)
             var_data = data_j[[id_col, date_col, var]]
 
-            # ── MK + intercept + normalise per station ────────────────────────
+            # ── MK + intercept + normalise per series ────────────────────────
             mk_df = (
                 var_data
                 .groupby(id_col)
                 .apply(
-                    _mk_station,
+                    _mk_series,
                     var=var,
                     date_col=date_col,
                     MK_level=MK_level,
@@ -472,7 +472,7 @@ def process_trend(
                     var_data
                     .groupby(id_col)
                     .apply(
-                        _change_station,
+                        _change_series,
                         var=var,
                         date_col=date_col,
                         period_change=pc_pairs,
@@ -487,7 +487,7 @@ def process_trend(
 
             if verbose:
                 n_sig = int(mk_df["H"].fillna(False).sum())
-                print(f"    '{var}' : {len(mk_df)} stations, "
+                print(f"    '{var}' : {len(mk_df)} séries, "
                       f"{n_sig} tendances significatives")
 
         period_df = pd.concat(period_rows, ignore_index=True)
@@ -561,7 +561,7 @@ def process_trend(
         n_sig = int(result["H"].fillna(False).sum())
         n_vars = result["variable_en"].nunique()
         print(f"  → {len(result)} résultats ({n_vars} variables × "
-              f"{len(result) // max(n_vars, 1)} stations) · "
+              f"{len(result) // max(n_vars, 1)} séries) · "
               f"{n_sig} tendances H=True")
 
     return result

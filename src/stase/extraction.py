@@ -45,9 +45,9 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class Adaptive:
-    """sampling_period adaptatif par station.
+    """sampling_period adaptatif par série.
 
-    L'année hydrologique de chaque station démarre au premier jour du mois
+    L'année hydrologique de chaque série démarre au premier jour du mois
     où `funct` (ex. np.nanmax, np.nanmin) est atteint sur les moyennes
     mensuelles inter-annuelles de la colonne `col`. Équivalent du
     `sampling_period = list(max, list("Q", na.rm=TRUE))` du EXstat R.
@@ -256,7 +256,7 @@ def _apply_is_date(
     Steps:
       1. Shift = yday(first real date in window) - 1  →  0-based yday of window start
       2. yday_raw = argmax_0based + Shift
-      3. Per-station circular mean of month_frac = (yday_raw+1) / (365.25/12)
+      3. Per-series circular mean of month_frac = (yday_raw+1) / (365.25/12)
       4. Values > mean+6 months → subtract nDay (leap-aware, based on _hy label year)
          Values < mean-6 months → add nDay
     Output _value may be negative or >365 — this is intentional for trend analysis.
@@ -820,7 +820,7 @@ def process_extraction(
                    Si la colonne de base n'est pas spécifiée dans le tuple, la première
                    colonne numérique se terminant par suffix_delimiter+suffix est utilisée.
     suffix_delimiter : délimiteur entre le nom de la variable et le suffix (défaut "_").
-    rm_duplicates : si True, supprime les lignes dupliquées (même station × même date),
+    rm_duplicates : si True, supprime les lignes dupliquées (même série × même date),
                    en gardant la première occurrence. Si False (défaut), lève une ValueError
                    explicite dès qu'un doublon est détecté.
     keep         : None (défaut) ou 'all'. Avec 'all', la sortie a le même nombre de lignes
@@ -828,7 +828,7 @@ def process_extraction(
                    NaN aux autres. Toutes les colonnes d'origine sont conservées. NApct est
                    toujours supprimé. Non supporté pour month/season/yearday.
     NAyear_lim   : nombre maximal d'années consécutives manquantes autorisé. Si ce seuil est
-                   dépassé pour une station, la série est tronquée autour de la lacune : seule
+                   dépassé pour une série, celle-ci est tronquée autour de la lacune : seule
                    la portion la plus longue (avant ou après) est conservée. Appliqué aux
                    données brutes avant agrégation. Conçu pour des données journalières.
     verbose      : messages de progression.
@@ -1025,11 +1025,21 @@ def process_extraction(
                     .reset_index(name="n")
                     .head(5)
                 )
+                hint = ""
+                if id_col == "_id":
+                    hint = (
+                        "\nAucune colonne texte n'a été détectée comme "
+                        "identifiant de série : toutes les lignes sont "
+                        "traitées comme une seule série, ce qui peut "
+                        "expliquer ces doublons. Si une de vos colonnes "
+                        "numériques identifie vos séries, convertissez-la "
+                        "en texte : data['code'] = data['code'].astype(str)."
+                    )
                 raise ValueError(
-                    f"{n_dup} lignes avec dates dupliquées (station × date). "
+                    f"{n_dup} lignes avec dates dupliquées (série × date). "
                     f"Premiers cas :\n{sample.to_string(index=False)}\n"
                     "Utilisez rm_duplicates=True pour supprimer automatiquement "
-                    "(première occurrence conservée)."
+                    "(première occurrence conservée)." + hint
                 )
 
     # Normalise funct en liste de (name, callable, col_names, kwargs, skip_na, is_date)
@@ -1343,7 +1353,7 @@ def _missing_year_hide(values: np.ndarray, dates: np.ndarray, nayear_lim: float)
 
 def _apply_nayear_lim(data: pd.DataFrame, id_col: str, date_col: str,
                       value_cols: list[str], nayear_lim: float) -> pd.DataFrame:
-    """Applique _missing_year_hide par (station, variable) sur les données brutes."""
+    """Applique _missing_year_hide par (série, variable) sur les données brutes."""
     data = data.copy()
     for _, grp in data.groupby(id_col, sort=False):
         grp_s = grp.sort_values(date_col)
@@ -1757,7 +1767,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
     """time_step 'none' : la sortie de funct est classée dynamiquement,
     comme en R où le résultat peut être de longueur quelconque :
 
-    - scalaire            → une ligne par station (+ NApct) ;
+    - scalaire            → une ligne par série (+ NApct) ;
     - même longueur que   → « transform » : colonne alignée sur les lignes
       le groupe             d'entrée (ex. moyenne mobile) ;
     - autre longueur      → « ragged » : une ligne par élément du résultat
@@ -1814,7 +1824,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
         parts = []
         for gid, sub, v in vec_results:
             if v is None:
-                continue    # station vide ou toute-NaN : absente de la sortie
+                continue    # série vide ou toute-NaN : absente de la sortie
             if len(v) == len(sub):
                 cols_dict = {id_col: gid}
                 if date_col is not None:
@@ -1871,8 +1881,8 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
 
 
 def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
-    """sampling_period adaptatif : calcule le mois de début par station puis
-    ré-appelle process_extraction par groupe de stations partageant le même
+    """sampling_period adaptatif : calcule le mois de début par série puis
+    ré-appelle process_extraction par groupe de séries partageant le même
     mois (équivalent fix_sampling_period + boucle par Code en R)."""
     date_col, id_col, _ = _detect_columns(data)
     if date_col is None:

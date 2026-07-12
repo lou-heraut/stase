@@ -21,7 +21,7 @@ qa = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
                         time_step="year", sampling_period="09-01")
 
 # année hydrologique adaptative (démarre au mois du max des moyennes
-# mensuelles inter-annuelles, calculé par station)
+# mensuelles inter-annuelles, calculé par série)
 qna = process_extraction(data, funct={"QNA": (np.nanmin, "Q")},
                          time_step="year",
                          sampling_period=Adaptive(np.nanmax, "Q"))
@@ -34,7 +34,7 @@ qna = process_extraction(data, funct={"QNA": (np.nanmin, "Q")},
   les kwargs dont la valeur est un nom de colonne des données reçoivent la
   colonne alignée sur le groupe (ex. `{"lim": "upLim"}`).
 - **Sorties dynamiques en time_step 'none'** : scalaire (une ligne par
-  station), vecteur de même longueur (colonne alignée, ex. moyenne mobile),
+  série), vecteur de même longueur (colonne alignée, ex. moyenne mobile),
   ou vecteur de longueur libre (lignes « ragged », ex. courbe des débits
   classés).
 - `sampling_period` fixe (`"MM-DD"`, `["MM-DD","MM-DD"]`) ou `Adaptive`.
