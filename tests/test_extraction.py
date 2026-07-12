@@ -208,6 +208,46 @@ def test_no_ghost_series_after_period_filter(time_step):
     assert set(r[r.columns[0]].unique()) == {"S1"}
 
 
+# ── retours vides typés ─────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("time_step,struct", [
+    ("year", ["Date"]), ("month", ["Date", "Month"]),
+    ("season", ["Date", "Season"]), ("none", []),
+])
+def test_period_excluding_all_returns_typed_empty(time_step, struct):
+    data = daily()
+    with pytest.warns(UserWarning, match="Aucune donnée dans la période"):
+        r = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                               time_step=time_step,
+                               period=["2050-01-01", "2060-12-31"])
+    assert len(r) == 0
+    assert list(r.columns) == ["id"] + struct + ["QA"]
+    # les accès aval fonctionnent sur le vide
+    assert len(r[r.QA > 0]) == 0
+    if "Date" in r.columns:
+        assert len(r[r.Date >= "2055-01-01"]) == 0
+
+
+def test_empty_input_returns_typed_empty():
+    data = daily().iloc[0:0]
+    r = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                           time_step="year")
+    assert len(r) == 0
+    assert list(r.columns) == ["id", "Date", "QA"]
+
+
+def test_empty_extraction_chains_into_trend():
+    from stase import process_trend
+    data = daily()
+    with pytest.warns(UserWarning):
+        qa = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                                time_step="year",
+                                period=["2050-01-01", "2060-12-31"])
+        t = process_trend(qa)
+    assert len(t) == 0
+    assert "H" in t.columns
+
+
 # ── validations d'entrée ────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("bad", ["9-1x", "13-01", "09-32", "0901", 901])

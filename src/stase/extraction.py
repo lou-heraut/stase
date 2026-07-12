@@ -109,6 +109,38 @@ _STRUCT_COLS: dict[str, list[str]] = {
     "none":        [],
 }
 
+# Dtypes des colonnes structurelles pour les retours vides typés.
+_STRUCT_DTYPES: dict[str, str] = {
+    "Date":       "datetime64[ns]",
+    "Month":      "int64",
+    "Yearday":    "int64",
+    "Season":     "object",
+    "YearSeason": "object",
+}
+
+
+def _empty_extraction_frame(
+    id_col: str,
+    time_step: str,
+    var_names: list[str],
+    rmNApct: bool,
+) -> pd.DataFrame:
+    """Retour vide typé : zéro ligne mais les colonnes attendues de la
+    sortie standard, pour que filtres / merges / accès aval fonctionnent
+    uniformément (r[r.Date > ...], r.QA, r.merge(...))."""
+    cols: dict = {id_col: pd.Series(dtype=object)}
+    for c in _STRUCT_COLS.get(time_step, []):
+        cols[c] = pd.Series(dtype=_STRUCT_DTYPES[c])
+    for v in var_names:
+        cols[v] = pd.Series(dtype="float64")
+    if not rmNApct:
+        if len(var_names) == 1:
+            cols["NApct"] = pd.Series(dtype="float64")
+        else:
+            for v in var_names:
+                cols[f"NApct_{v}"] = pd.Series(dtype="float64")
+    return pd.DataFrame(cols)
+
 
 # ---------------------------------------------------------------------------
 # Helpers calendaires
@@ -986,7 +1018,23 @@ def process_extraction(
             raise ValueError("NAyear_lim doit être un nombre strictement positif.")
 
     if len(data) == 0:
-        return pd.DataFrame()
+        # Retour vide typé (meilleur effort) : colonnes attendues de la
+        # sortie standard. Chemins non définissables sans données
+        # (compress, expand, keep='all') → DataFrame nu.
+        if compress or expand or keep == "all":
+            return pd.DataFrame()
+        try:
+            _, _id, _ = _detect_columns(data)
+            _names = [n for (n, *_) in
+                      _normalize_funct(funct, funct_args, nameEX,
+                                       is_date_global=is_date)]
+            if suffix:
+                _d = suffix_delimiter or "_"
+                _names = [f"{n}{_d}{s}" for n in _names for s in suffix]
+            return _empty_extraction_frame(_id if _id is not None else "ID",
+                                           time_step, _names, rmNApct)
+        except Exception:
+            return pd.DataFrame()
 
     data = data.copy()
 
@@ -1132,7 +1180,12 @@ def process_extraction(
                 f"Aucune donnée dans la période spécifiée [{p0.date()} → {p1.date()}]. "
                 f"Plage des données : {_d_min.date()} → {_d_max.date()}."
             )
-            return pd.DataFrame()
+            if compress or expand or keep == "all":
+                return pd.DataFrame()
+            return _empty_extraction_frame(
+                "ID" if id_col == "_id" else id_col, time_step,
+                [n for (n, *_) in funct_list], rmNApct,
+            )
 
     data = data.sort_values([id_col] + ([date_col] if date_col else [])).reset_index(drop=True)
 
@@ -1502,7 +1555,7 @@ def _extract_year(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
 
     if len(data) == 0:
         warnings.warn("Aucune donnée dans la fenêtre d'échantillonnage.")
-        return pd.DataFrame()
+        return _empty_extraction_frame(id_col, "year", [nameEX], rmNApct)
 
     ext = _groupby_agg(data, [id_col, "_hy"], col_name, funct, funct_kwargs, skip_na)
 
@@ -1877,7 +1930,9 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
                              nameEX: v}
             parts.append(pd.DataFrame(cols_dict))
         if not parts:
-            return pd.DataFrame()
+            # toutes les séries vides ou toutes-NaN : vide typé
+            return pd.DataFrame({id_col: pd.Series(dtype=object),
+                                 nameEX: pd.Series(dtype="float64")})
         return pd.concat(parts, ignore_index=True)
 
     ext = pd.DataFrame(rows_scalar,

@@ -70,6 +70,13 @@ Les colonnes sont détectées par **type**, jamais par nom : datetime →
 dates, texte → identifiant de série, numérique → valeurs. Des codes de
 série numériques doivent être convertis : `data["code"].astype(str)`.
 
+Quand il n'y a rien à retourner (entrée vide, `period` excluant toutes
+les données…), la sortie est un DataFrame de zéro ligne **avec les
+colonnes attendues** : filtres, merges et enchaînements fonctionnent
+sans traitement spécial du cas vide. Exceptions (colonnes indéfinissables
+sans données) : `compress`, `expand` et `keep='all'` retournent un
+DataFrame nu.
+
 ## Divergences intentionnelles vs EXstat R
 
 - `NApct` utilise le nombre réel de jours calendaires comme dénominateur

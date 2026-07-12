@@ -211,8 +211,10 @@ EXstat_Claude.
 
 ### 5.2 Cohérence de l'API
 > ✅ **Fait (2026-07-12)** — verbose=False partout, alias snake_case
-> exportés, `_verbose_box` partagé (`_display.py`). Non fait : retours
-> vides avec colonnes attendues (reporté — comportement à concevoir).
+> exportés, `_verbose_box` partagé (`_display.py`). Retours vides typés
+> (validé utilisateur) : zéro ligne avec les colonnes standard attendues
+> pour extraction et trend ; `compress`/`expand`/`keep='all'` restent
+> nus (colonnes indéfinissables sans données) — documenté dans README.
 - `verbose` : défaut `False` dans process_extraction, `True` dans
   process_trend → harmoniser sur `False`.
 - Alias snake_case validés par l'utilisateur (2026-07-12) :

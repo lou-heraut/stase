@@ -151,15 +151,22 @@ def test_multiple_id_columns_with_underscore_roundtrip():
     assert list(t.columns[:2]) == ["ID", "model"]
 
 
-def test_period_trend_outside_data_returns_empty():
+def test_period_trend_outside_data_returns_typed_empty():
     with pytest.warns(UserWarning):
         t = process_trend(_yearly(), period_trend=["2050-01-01", "2060-12-31"],
                           verbose=False)
     assert len(t) == 0
+    # colonnes standard présentes : les accès aval fonctionnent
+    for c in ("ID", "variable_en", "H", "p", "a", "b",
+              "period_trend_start", "a_normalise_min"):
+        assert c in t.columns
+    assert t.H.dtype == "boolean"
+    assert len(t[t.H == True]) == 0                      # noqa: E712
 
 
-def test_empty_input_returns_empty():
+def test_empty_input_returns_typed_empty():
     with pytest.warns(UserWarning):
         t = process_trend(pd.DataFrame({"ID": [], "Date": [], "X": []})
                           .astype({"Date": "datetime64[ns]"}))
     assert len(t) == 0
+    assert "ID" in t.columns and "H" in t.columns

@@ -136,6 +136,38 @@ def _change_series(grp, var, date_col, period_change, to_norm):
     })
 
 
+def _empty_trend_frame(id_cols, has_suffix, has_change, show_advance_stat):
+    """Retour vide typé : zéro ligne mais les colonnes standard de la
+    sortie, pour que les filtres et merges aval fonctionnent uniformément."""
+    cols: dict = {}
+    for c in (id_cols or ["ID"]):
+        cols[c] = pd.Series(dtype=object)
+    cols["variable_en"] = pd.Series(dtype=object)
+    if has_suffix:
+        cols["variable_no_suffix_en"] = pd.Series(dtype=object)
+    cols["level"] = pd.Series(dtype="float64")
+    cols["H"] = pd.array([], dtype="boolean")
+    cols["p"] = pd.Series(dtype="float64")
+    cols["a"] = pd.Series(dtype="float64")
+    if show_advance_stat:
+        cols["stat"] = pd.Series(dtype="float64")
+        cols["dep"] = pd.Series(dtype="float64")
+    cols["b"] = pd.Series(dtype="float64")
+    cols["period_trend_start"] = pd.Series(dtype="datetime64[ns]")
+    cols["period_trend_end"] = pd.Series(dtype="datetime64[ns]")
+    for c in ("mean_period_trend", "a_normalise",
+              "a_normalise_min", "a_normalise_max"):
+        cols[c] = pd.Series(dtype="float64")
+    if has_change:
+        for c in ("period_change_start_1", "period_change_end_1",
+                  "period_change_start_2", "period_change_end_2"):
+            cols[c] = pd.Series(dtype="datetime64[ns]")
+        for c in ("mean_period_change_1", "mean_period_change_2",
+                  "change", "change_min", "change_max"):
+            cols[c] = pd.Series(dtype="float64")
+    return pd.DataFrame(cols)
+
+
 # ── Main function ─────────────────────────────────────────────────────────────
 
 def process_trend(
@@ -224,7 +256,12 @@ def process_trend(
         )
     if len(dataEX) == 0:
         warnings.warn("dataEX est vide (0 lignes). Retour d'un DataFrame vide.", UserWarning)
-        return pd.DataFrame()
+        _ids = [c for c in dataEX.columns
+                if pd.api.types.is_string_dtype(dataEX[c])
+                or dataEX[c].dtype == object]
+        return _empty_trend_frame(_ids, suffix is not None,
+                                  period_change is not None,
+                                  show_advance_stat)
     if time_dependency_option not in ("INDE", "AR1", "LTP"):
         raise ValueError(
             f"time_dependency_option='{time_dependency_option}' invalide. "
@@ -540,7 +577,10 @@ def process_trend(
             "Aucune donnée dans les périodes spécifiées. Retour d'un DataFrame vide.",
             UserWarning,
         )
-        return pd.DataFrame()
+        return _empty_trend_frame(original_id_cols or ["ID"],
+                                  suffix_full is not None,
+                                  pc_pairs is not None,
+                                  show_advance_stat)
 
     result = pd.concat(all_results, ignore_index=True)
     result = result.sort_values([id_col, "variable_en"]).reset_index(drop=True)
