@@ -1463,7 +1463,10 @@ def _extract_year(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
     ref_end   = pd.Timestamp(f"{ref_year}-{sp_end}")
     dt2add    = 1 if ref_start > ref_end else 0
 
-    data["_hy"] = _assign_hydro_year(data[date_col], sp_start, sp_end, dt2add)
+    # _hy calculé une seule fois par appel : les variables suivantes du
+    # multi-funct réutilisent la colonne (même sampling_period pour toutes)
+    if "_hy" not in data.columns:
+        data["_hy"] = _assign_hydro_year(data[date_col], sp_start, sp_end, dt2add)
     data = data.dropna(subset=["_hy"])
     data["_hy"] = data["_hy"].astype(np.int32)
 
@@ -1514,7 +1517,8 @@ def _extract_year(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
 
 def _extract_year_month(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na,
                          NApct_lim, rmNApct, nameEX, resolution="day"):
-    data["_ym"] = data[date_col].dt.to_period("M")
+    if "_ym" not in data.columns:
+        data["_ym"] = data[date_col].dt.to_period("M")
 
     ext = _groupby_agg(data, [id_col, "_ym"], col_name, funct, funct_kwargs, skip_na)
 
@@ -1541,7 +1545,8 @@ def _extract_year_month(data, id_col, date_col, col_name, funct, funct_kwargs, s
 
 def _extract_month(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na,
                     NApct_lim, rmNApct, nameEX, resolution="day"):
-    data["_month"] = data[date_col].dt.month.astype(np.int8)
+    if "_month" not in data.columns:
+        data["_month"] = data[date_col].dt.month.astype(np.int8)
 
     ext = _groupby_agg(data, [id_col, "_month"], col_name, funct, funct_kwargs, skip_na)
 
@@ -1582,23 +1587,25 @@ def _extract_month(data, id_col, date_col, col_name, funct, funct_kwargs, skip_n
 def _extract_year_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na,
                           NApct_lim, rmNApct, nameEX, seasons, resolution="day"):
     get_season, sub_seasons = _build_season_map(seasons)
+    sub_np = np.array(sub_seasons, dtype=np.int64)
 
-    # Mapping vectorisé : indexage numpy (zéro boucle Python sur les lignes)
-    month_arr = data[date_col].dt.month.to_numpy()   # (N,) int64
-    year_arr  = data[date_col].dt.year.to_numpy()    # (N,) int64
-    sub_np        = np.array(sub_seasons, dtype=np.int64)
-    get_season_np = np.array(get_season)
+    # Clés calculées une seule fois par appel (multi-funct : réutilisées)
+    if "_season_ym" not in data.columns:
+        # Mapping vectorisé : indexage numpy (zéro boucle Python sur les lignes)
+        month_arr = data[date_col].dt.month.to_numpy()   # (N,) int64
+        year_arr  = data[date_col].dt.year.to_numpy()    # (N,) int64
+        get_season_np = np.array(get_season)
 
-    sub_vals    = sub_np[month_arr - 1]              # vectorisé
-    season_name = get_season_np[month_arr - 1]       # vectorisé
+        sub_vals    = sub_np[month_arr - 1]              # vectorisé
+        season_name = get_season_np[month_arr - 1]       # vectorisé
 
-    raw      = month_arr.astype(np.int64) - 1 - sub_vals
-    season_m = (raw % 12 + 1).astype(np.int64)
-    season_y = year_arr + raw // 12
+        raw      = month_arr.astype(np.int64) - 1 - sub_vals
+        season_m = (raw % 12 + 1).astype(np.int64)
+        season_y = year_arr + raw // 12
 
-    # Clé groupe : liste python rapide (formatage compact)
-    data["_season_ym"]   = [f"{y}-{m:02d}" for y, m in zip(season_y.tolist(), season_m.tolist())]
-    data["_season_name"] = season_name
+        # Clé groupe : liste python rapide (formatage compact)
+        data["_season_ym"]   = [f"{y}-{m:02d}" for y, m in zip(season_y.tolist(), season_m.tolist())]
+        data["_season_name"] = season_name
 
     ext = _groupby_agg(data, [id_col, "_season_ym"], col_name, funct, funct_kwargs, skip_na)
 
@@ -1627,8 +1634,9 @@ def _extract_year_season(data, id_col, date_col, col_name, funct, funct_kwargs, 
     if NApct_lim is not None:
         ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
 
-    ext["Date"] = [pd.Timestamp(year=int(s[:4]), month=int(s[5:]), day=1)
-                   for s in ym_arr_ext]
+    _dcache = {s: pd.Timestamp(year=int(s[:4]), month=int(s[5:]), day=1)
+               for s in set(ym_arr_ext)}
+    ext["Date"] = [_dcache[s] for s in ym_arr_ext]
     ext["YearSeason"] = [f"{s[:4]}-{n}" for s, n in zip(ym_arr_ext, sname_arr)]
     ext = ext.rename(columns={"_value": nameEX})
 
@@ -1643,20 +1651,20 @@ def _extract_year_season(data, id_col, date_col, col_name, funct, funct_kwargs, 
 def _extract_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na,
                      NApct_lim, rmNApct, nameEX, seasons, resolution="day"):
     get_season, sub_seasons = _build_season_map(seasons)
+    sub_np = np.array(sub_seasons, dtype=np.int64)
 
-    month_arr = data[date_col].dt.month.to_numpy()
-    year_arr  = data[date_col].dt.year.to_numpy()
-    sub_np        = np.array(sub_seasons, dtype=np.int64)
-    get_season_np = np.array(get_season)
+    if "_season_name" not in data.columns or "_season_sm" not in data.columns:
+        month_arr = data[date_col].dt.month.to_numpy()
+        get_season_np = np.array(get_season)
 
-    sub_vals    = sub_np[month_arr - 1]
-    season_name = get_season_np[month_arr - 1]
+        sub_vals    = sub_np[month_arr - 1]
+        season_name = get_season_np[month_arr - 1]
 
-    raw      = month_arr.astype(np.int64) - 1 - sub_vals
-    season_m = (raw % 12 + 1).astype(np.int64)   # mois de début de saison (1-12)
+        raw      = month_arr.astype(np.int64) - 1 - sub_vals
+        season_m = (raw % 12 + 1).astype(np.int64)   # mois de début de saison (1-12)
 
-    data["_season_name"] = season_name
-    data["_season_sm"]   = season_m.astype(np.int8)
+        data["_season_name"] = season_name
+        data["_season_sm"]   = season_m.astype(np.int8)
 
     ext = _groupby_agg(data, [id_col, "_season_name"], col_name, funct, funct_kwargs, skip_na)
 
@@ -1724,9 +1732,10 @@ def _extract_yearday(data, id_col, date_col, col_name, funct, funct_kwargs, skip
     Groupement par jour de l'année 1-365 (yday brut = comportement R).
     Le jour 366 (29 fév des années bissextiles) est exclu.
     """
-    yd = data[date_col].dt.day_of_year.to_numpy().astype(np.float32)
-    yd[yd >= 366] = np.nan
-    data["_yd"] = yd
+    if "_yd" not in data.columns:
+        yd = data[date_col].dt.day_of_year.to_numpy().astype(np.float32)
+        yd[yd >= 366] = np.nan
+        data["_yd"] = yd
     data = data.dropna(subset=["_yd"])
     data["_yd"] = data["_yd"].astype(np.int16)
 
