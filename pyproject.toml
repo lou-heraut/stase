@@ -20,6 +20,10 @@ dependencies = [
     "scipy",
 ]
 
+[project.urls]
+Repository = "https://github.com/lou-heraut/stase"
+Issues = "https://github.com/lou-heraut/stase/issues"
+
 [project.optional-dependencies]
 dev = ["pytest"]
 

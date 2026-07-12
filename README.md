@@ -1,8 +1,6 @@
 # stase
 
-<!-- Badge CI à activer après le push GitHub :
-[![tests](https://github.com/<owner>/stase/actions/workflows/tests.yml/badge.svg)](https://github.com/<owner>/stase/actions/workflows/tests.yml)
--->
+[![tests](https://github.com/lou-heraut/stase/actions/workflows/tests.yml/badge.svg)](https://github.com/lou-heraut/stase/actions/workflows/tests.yml)
 
 **STASE** — *STatistical Aggregation & Stationarity Evaluation*.
 
@@ -106,7 +104,7 @@ DataFrame nu.
 Depuis GitHub (pas de publication PyPI pour l'instant) :
 
 ```bash
-pip install "stase @ git+https://github.com/<owner>/stase.git"
+pip install "stase @ git+https://github.com/lou-heraut/stase.git"
 ```
 
 Pour le développement : cloner le repo puis `pip install -e .`
