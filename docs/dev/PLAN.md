@@ -313,3 +313,26 @@ EXstat_Claude.
   sur besoin réel côté card.
 - La publication GitHub (remotes, noms de repos) est suivie dans
   `card/ROADMAP.md`, pas ici.
+
+---
+
+## Phase 6 — Prise en main utilisateur/développeur (2026-07-12, session nettoyage)
+
+> ✅ **Fait** (décisions utilisateur : GitHub pas PyPI, pas de mkdocs,
+> comportements auto acceptés si limités + documentés + signalés) :
+> - stase : conversion auto des dates texte ISO strictes (warning,
+>   formats ambigus toujours en erreur) ; CI GitHub Actions (pytest
+>   matrice py3.10-3.12 × pandas 2.2/3 + ruff) ; ruff clean ; PLAN.md →
+>   docs/dev/ ; docs/img/ pour figures (déposées par l'utilisateur) ;
+>   README : installation GitHub, badge/figure en placeholders.
+> - card : rename= + vérif amont input_vars + affectation auto non
+>   ambiguë ; CARD_info() + filtres CARD_list_all(topic/variable/search) ;
+>   catalogue docs/CARDS.md (215 fiches, généré par
+>   scripts/generate_catalog.py) ; 25 docstrings publiques ; CI ;
+>   ROADMAP/RENAMING → docs/dev/ ; README réécrit ; 47 tests.
+> - Skosmos/SKOS : différé — catalogue md maintenant, export SKOS
+>   possible plus tard (voie institutionnelle : thesaurus.inrae.fr),
+>   pas d'instance auto-hébergée.
+>
+> Reste au push GitHub : renseigner les URLs `<owner>` (READMEs, badge,
+> workflow card), activer les workflows, vérifier la matrice CI.
