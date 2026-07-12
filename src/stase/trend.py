@@ -285,6 +285,8 @@ def process_trend(
         )
 
     # ── 2. Detect columns ─────────────────────────────────────────────────────
+    from .extraction import _maybe_parse_iso_dates
+    dataEX = _maybe_parse_iso_dates(dataEX)
     date_col = None
     id_cols  = []
     var_cols = []

@@ -34,6 +34,7 @@ Corrections vs R :
 from __future__ import annotations
 
 import calendar
+import re
 import warnings
 from dataclasses import dataclass
 from datetime import timedelta
@@ -150,6 +151,56 @@ def _empty_extraction_frame(
 # ---------------------------------------------------------------------------
 # Helpers calendaires
 # ---------------------------------------------------------------------------
+
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _maybe_parse_iso_dates(data: pd.DataFrame) -> pd.DataFrame:
+    """Convertit automatiquement UNE colonne texte de dates ISO en datetime.
+
+    Uniquement quand c'est non ambigu : aucune colonne datetime déjà
+    présente, et exactement une colonne texte dont toutes les valeurs
+    non nulles sont au format strict 'YYYY-MM-DD' (l'ISO 8601 ne prête
+    à aucune interprétation, contrairement à '01/02/2000'). La
+    conversion est signalée par un UserWarning ; plusieurs colonnes
+    candidates → aucune conversion (ambigu). Corrige au passage le piège
+    d'une colonne de dates en texte prise pour l'identifiant de série.
+    """
+    if any(pd.api.types.is_datetime64_any_dtype(data[c]) for c in data.columns):
+        return data
+
+    candidates = []
+    for col in data.columns:
+        if not (pd.api.types.is_string_dtype(data[col])
+                or data[col].dtype == object):
+            continue
+        vals = data[col].dropna()
+        if len(vals) == 0:
+            continue
+        head = vals.head(20).astype(str)
+        if not head.map(lambda s: bool(_ISO_DATE_RE.match(s))).all():
+            continue
+        if vals.astype(str).str.match(_ISO_DATE_RE).all():
+            candidates.append(col)
+
+    if len(candidates) != 1:
+        return data
+
+    col = candidates[0]
+    try:
+        converted = pd.to_datetime(data[col], format="%Y-%m-%d")
+    except (ValueError, TypeError):
+        return data
+    data = data.copy()
+    data[col] = converted
+    warnings.warn(
+        f"Colonne '{col}' (texte, format ISO 'YYYY-MM-DD' non ambigu) "
+        "convertie automatiquement en datetime. Pour éviter ce warning, "
+        f"convertissez en amont : data['{col}'] = pd.to_datetime(data['{col}']).",
+        UserWarning, stacklevel=3,
+    )
+    return data
+
 
 def _detect_columns(data: pd.DataFrame) -> tuple[str, str | None, list[str]]:
     """Retourne (date_col, id_col, value_cols)."""
@@ -1100,6 +1151,9 @@ def process_extraction(
             f"{list(dict.fromkeys(dup_col_names))}. "
             "Renommez-les avant d'appeler process_extraction."
         )
+
+    # --- Conversion automatique des dates ISO non ambiguës (texte) ---
+    data = _maybe_parse_iso_dates(data)
 
     date_col, id_col, value_cols = _detect_columns(data)
 

@@ -280,6 +280,35 @@ def test_positional_agg_is_date_pipeline():
     assert fast.tQJXA.dtype == "Int64"
 
 
+# ── conversion automatique des dates ISO ────────────────────────────────────
+
+def test_iso_string_dates_auto_converted():
+    data = daily()
+    data["date"] = data["date"].dt.strftime("%Y-%m-%d")   # dates en texte
+    with pytest.warns(UserWarning, match="convertie automatiquement"):
+        r = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                               time_step="year", sampling_period="01-01")
+    ref = process_extraction(daily(), funct={"QA": (np.nanmean, "Q")},
+                             time_step="year", sampling_period="01-01")
+    pd.testing.assert_frame_equal(r, ref)
+
+
+def test_ambiguous_string_dates_still_raise():
+    data = daily()
+    data["date"] = data["date"].dt.strftime("%d/%m/%Y")   # format ambigu
+    with pytest.raises(ValueError, match="datetime"):
+        process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                           time_step="year")
+
+
+def test_existing_datetime_column_untouched():
+    data = daily()
+    data["label"] = data["date"].dt.strftime("%Y-%m-%d")  # texte ISO en plus
+    r = process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                           time_step="year", sampling_period="01-01")
+    assert len(r) > 0    # la datetime existante est utilisée, pas de conflit
+
+
 # ── validations d'entrée ────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("bad", ["9-1x", "13-01", "09-32", "0901", 901])

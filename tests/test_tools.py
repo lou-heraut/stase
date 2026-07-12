@@ -171,9 +171,14 @@ def test_ltp_seeded_is_reproducible_with_ties():
 
 
 def test_ltp_rng_irrelevant_without_ties():
-    # sans ex-æquo, le tirage n'intervient pas : tous les rng équivalents
-    x = _series("trend_short")
-    assert len(np.unique(x)) == len(x)
+    # sans ex-æquo, le tirage n'intervient pas : tous les rng équivalents.
+    # NB : les ex-æquo se jugent sur la série DÉTENDANCÉE (le détendançage
+    # peut en créer sur des données arrondies) — stat_short est vérifiée
+    # sans ex-æquo après détendançage.
+    x = _series("stat_short")
+    trend = getMKStat(x)["trend"]
+    detrended = x - trend * np.arange(1, len(x) + 1)
+    assert len(np.unique(detrended)) == len(detrended)
     r1 = GeneralMannKendall(x, time_dependency_option="LTP", rng=1)
     r2 = GeneralMannKendall(x, time_dependency_option="LTP", rng=2)
     r3 = GeneralMannKendall(x, time_dependency_option="LTP")
