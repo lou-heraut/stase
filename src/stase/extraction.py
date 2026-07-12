@@ -51,13 +51,12 @@ class Adaptive:
     """sampling_period adaptatif par série.
 
     L'année hydrologique de chaque série démarre au premier jour du mois
-    où `funct` (ex. np.nanmax, np.nanmin) est atteint sur les moyennes
-    mensuelles inter-annuelles de la colonne `col`. Équivalent du
-    `sampling_period = list(max, list("Q", na.rm=TRUE))` du EXstat R.
+    où `func` (ex. np.nanmax, np.nanmin) est atteint sur les moyennes
+    mensuelles inter-annuelles de la colonne `col`.
 
     default : mois de repli 'MM-DD' si la série est vide ou toute-NaN.
     """
-    funct: Callable
+    func: Callable
     col: str
     default: str = "09-01"
 
@@ -104,7 +103,29 @@ _PANDAS_AGG_ALIASES: dict = {
     np.nanstd:    "std",
 }
 
-# Colonnes structurelles (hors id et valeurs) par time_step.
+# Renommage final des colonnes de sortie : l'interne travaille avec les
+# noms historiques (Date, Month, NApct...), la sortie utilisateurice est
+# en snake_case et la colonne de date reprend le nom de la colonne
+# d'entrée (jamais un nom imposé).
+_OUT_RENAMES = {"Month": "month", "Season": "season",
+                "YearSeason": "year_season", "Yearday": "yearday"}
+
+
+def _finalize_names(df: pd.DataFrame, date_col: str | None) -> pd.DataFrame:
+    ren = {}
+    for c in df.columns:
+        if c == "Date":
+            ren[c] = date_col if date_col is not None else "date"
+        elif c in _OUT_RENAMES:
+            ren[c] = _OUT_RENAMES[c]
+        elif c == "NApct":
+            ren[c] = "na_pct"
+        elif isinstance(c, str) and c.startswith("NApct_"):
+            ren[c] = "na_pct_" + c[len("NApct_"):]
+    return df.rename(columns=ren) if ren else df
+
+
+# Colonnes structurelles internes (hors id et valeurs) par time_step.
 _STRUCT_COLS: dict[str, list[str]] = {
     "year":        ["Date"],
     "year-month":  ["Date"],
@@ -129,23 +150,29 @@ def _empty_extraction_frame(
     id_col: str,
     time_step: str,
     var_names: list[str],
-    rmNApct: bool,
+    drop_na_pct: bool,
+    date_col: str | None = None,
+    finalize: bool = True,
 ) -> pd.DataFrame:
     """Retour vide typé : zéro ligne mais les colonnes attendues de la
     sortie standard, pour que filtres / merges / accès aval fonctionnent
-    uniformément (r[r.Date > ...], r.QA, r.merge(...))."""
+    uniformément (r[r.date > ...], r.QA, r.merge(...))."""
     cols: dict = {id_col: pd.Series(dtype=object)}
     for c in _STRUCT_COLS.get(time_step, []):
         cols[c] = pd.Series(dtype=_STRUCT_DTYPES[c])
     for v in var_names:
         cols[v] = pd.Series(dtype="float64")
-    if not rmNApct:
+    if not drop_na_pct:
         if len(var_names) == 1:
             cols["NApct"] = pd.Series(dtype="float64")
         else:
             for v in var_names:
                 cols[f"NApct_{v}"] = pd.Series(dtype="float64")
-    return pd.DataFrame(cols)
+    out = pd.DataFrame(cols)
+    # finalize=False : appel interne au pipeline (noms historiques attendus
+    # par la jointure multi-variables ; la finalisation arrive en fin de
+    # process_extraction)
+    return _finalize_names(out, date_col) if finalize else out
 
 
 # ---------------------------------------------------------------------------
@@ -668,7 +695,7 @@ def _parse_funct_tuple(t: tuple) -> tuple[Callable, list[str], dict, bool, bool]
             pos_spec.append(("lit", item))
         else:
             raise ValueError(
-                f"Élément inattendu dans le tuple funct : {item!r}. "
+                f"Élément inattendu dans le tuple func : {item!r}. "
                 "Format attendu : (fn, *col_names_ou_littéraux, kwargs?, is_date?)"
             )
     col_names = [v for t_, v in pos_spec if t_ == "col"]
@@ -703,7 +730,7 @@ def _normalize_funct(
     def _from_tuple(name: str, t: tuple) -> tuple:
         if not callable(t[0]):
             raise ValueError(
-                f"Premier élément de funct['{name}'] doit être callable, reçu {type(t[0])}"
+                f"Premier élément de func['{name}'] doit être callable, reçu {type(t[0])}"
             )
         fn, col_names, kwargs, skip_na, is_date = _parse_funct_tuple(t)
         return (name, fn, col_names, kwargs, skip_na, is_date)
@@ -752,12 +779,12 @@ def _normalize_funct(
                 entries.append(_from_callable_args(name, val, args_i))
             else:
                 raise ValueError(
-                    f"funct['{name}'] doit être callable ou tuple, reçu {type(val)}"
+                    f"func['{name}'] doit être callable ou tuple, reçu {type(val)}"
                 )
         return entries
 
     raise ValueError(
-        f"funct doit être un callable, un tuple ou un dict, reçu {type(funct)}"
+        f"func doit être un callable, un tuple ou un dict, reçu {type(funct)}"
     )
 
 
@@ -934,23 +961,21 @@ def _apply_expand(
 
 def process_extraction(
     data: pd.DataFrame,
-    funct: Callable | dict,
-    funct_args: list | None = None,
+    func: Callable | dict,
     time_step: str = "year",
     sampling_period: str | list | None = None,
     period: list | None = None,
-    NApct_lim: float | None = None,
-    rmNApct: bool = True,
-    nameEX: str = "X",
-    Seasons: list[str] | None = None,
+    max_na_pct: float | None = None,
+    drop_na_pct: bool = True,
+    name: str = "X",
+    seasons: list[str] | None = None,
     compress: bool = False,
     expand: bool = False,
-    is_date: bool = False,
     suffix: list[str] | None = None,
     suffix_delimiter: str = "_",
-    rm_duplicates: bool = False,
+    drop_duplicates: bool = False,
     keep: str | None = None,
-    NAyear_lim: float | None = None,
+    max_na_years: float | None = None,
     verbose: bool = False,
 ) -> pd.DataFrame | dict:
     """
@@ -958,47 +983,66 @@ def process_extraction(
 
     Paramètres
     ----------
-    data         : DataFrame avec colonne datetime, colonne str (id), colonne(s) numérique(s).
-    funct        : Callable ou dict {name: callable | tuple} pour plusieurs variables.
-                   Tuple : (fn, *colonnes_ou_littéraux, kwargs?, is_date?).
-                   Attention à l'ambiguïté bool : un bool en DERNIÈRE position
-                   est toujours is_date — (fn, "Q", True) signifie is_date=True ;
-                   pour passer un littéral booléen positionnel à fn, ajoutez le
+    data         : DataFrame avec colonne datetime, colonne texte (identifiant
+                   de série), colonne(s) numérique(s). Les colonnes sont
+                   reconnues par leur type, jamais par leur nom.
+    func         : Callable ou dict {nom: callable | tuple} pour plusieurs
+                   variables. Tuple : (fn, *colonnes_ou_littéraux, kwargs?,
+                   is_date?). Un bool en DERNIÈRE position est toujours
+                   is_date : (fn, "Q", True) signifie is_date=True ; pour
+                   passer un littéral booléen positionnel à fn, ajoutez le
                    dict kwargs après : (fn, "Q", True, {}) → fn(Q, True).
-                   Un kwarg str égal à un nom de colonne des données devient une
-                   référence : la colonne, alignée sur le groupe, est passée à fn
-                   (ex. {"lim": "upLim"}) ; visible avec verbose=True.
-    funct_args   : DÉPRÉCIÉ — intégrer colonnes et kwargs dans funct via tuple.
-    time_step    : 'year' | 'year-month' | 'month' | 'year-season' | 'season' | 'yearday' | 'none'.
-    sampling_period : fenêtre 'MM-DD' ou ['MM-DD','MM-DD'], utilisée pour time_step='year'.
-    period       : [date_debut, date_fin] pour restreindre la période.
-    NApct_lim    : seuil de lacunes (%). Au-delà, valeur mise à NA.
-    rmNApct      : supprime la/les colonne(s) NApct si True.
-    nameEX       : nom de colonne de sortie (funct callable sans dict uniquement).
-    Seasons      : découpage saisonnier ex. ["DJF","MAM","JJA","SON"].
-    compress     : pivot long→large (mois/saisons en colonnes).
-                   Disponible pour time_step 'month','year-month','season','year-season'.
-    expand       : retourne un dict {name: DataFrame} au lieu d'un seul DataFrame.
-    is_date      : DÉPRÉCIÉ — utiliser is_date=True dans le tuple funct.
-    suffix       : liste de suffixes à appliquer par produit cartésien avec funct.
-                   Ex: funct={"QA": (np.mean, "Q")}, suffix=["obs","sim"]
-                   → colonnes QA_obs (sur Q_obs) et QA_sim (sur Q_sim).
-                   Si la colonne de base n'est pas spécifiée dans le tuple, la première
-                   colonne numérique se terminant par suffix_delimiter+suffix est utilisée.
-    suffix_delimiter : délimiteur entre le nom de la variable et le suffix (défaut "_").
-    rm_duplicates : si True, supprime les lignes dupliquées (même série × même date),
-                   en gardant la première occurrence. Si False (défaut), lève une ValueError
-                   explicite dès qu'un doublon est détecté.
-    keep         : None (défaut) ou 'all'. Avec 'all', la sortie a le même nombre de lignes
-                   que l'entrée : la valeur agrégée est assignée à la première ligne du groupe,
-                   NaN aux autres. Toutes les colonnes d'origine sont conservées. NApct est
-                   toujours supprimé. Non supporté pour month/season/yearday.
-    NAyear_lim   : nombre maximal d'années consécutives manquantes autorisé. Si ce seuil est
-                   dépassé pour une série, celle-ci est tronquée autour de la lacune : seule
-                   la portion la plus longue (avant ou après) est conservée. Appliqué aux
-                   données brutes avant agrégation. Conçu pour des données journalières.
+                   Un kwarg str égal à un nom de colonne des données devient
+                   une référence : la colonne, alignée sur le groupe, est
+                   passée à fn (ex. {"lim": "upLim"}) ; visible avec
+                   verbose=True.
+    time_step    : 'year' | 'year-month' | 'month' | 'year-season' | 'season'
+                   | 'yearday' | 'none'.
+    sampling_period : fenêtre 'MM-DD' ou ['MM-DD','MM-DD'] (time_step 'year'
+                   et 'none'), ou Adaptive(func, col) pour une fenêtre
+                   adaptative par série.
+    period       : [date_début, date_fin] pour restreindre la période.
+    max_na_pct   : seuil de lacunes (%). Au-delà, la valeur du groupe est NaN.
+    drop_na_pct  : supprime la/les colonne(s) na_pct de la sortie si True.
+    name         : nom de colonne de sortie (func callable sans dict
+                   uniquement).
+    seasons      : découpage saisonnier, ex. ["DJF","MAM","JJA","SON"].
+    compress     : pivot long→large (mois/saisons en colonnes). Disponible
+                   pour time_step 'month','year-month','season','year-season'.
+    expand       : retourne un dict {nom: DataFrame} au lieu d'un DataFrame.
+    suffix       : liste de suffixes appliqués en produit cartésien avec func.
+                   Ex : func={"QA": (np.nanmean, "Q")}, suffix=["obs","sim"]
+                   donne QA_obs (sur Q_obs) et QA_sim (sur Q_sim).
+    suffix_delimiter : délimiteur variable/suffixe (défaut "_").
+    drop_duplicates : si True, supprime les lignes dupliquées (même série,
+                   même date) en gardant la première occurrence. Si False
+                   (défaut), lève une ValueError explicite.
+    keep         : None (défaut), 'all' (sortie au même nombre de lignes que
+                   l'entrée, valeur agrégée sur la première ligne de chaque
+                   groupe) ou liste de colonnes à conserver.
+    max_na_years : nombre maximal d'années consécutives manquantes. Au-delà,
+                   la série est tronquée autour de la lacune (la portion la
+                   plus longue est conservée).
     verbose      : messages de progression.
+
+    Sortie
+    ------
+    La colonne de date de sortie porte le nom de la colonne de date
+    d'entrée. Colonnes structurelles en snake_case (month, season,
+    year_season, yearday) ; colonne de lacunes : na_pct.
     """
+    # Pont vers les noms internes historiques (hérités de la conversion R) :
+    # la logique interne est validée par les goldens, on ne la renomme pas.
+    funct = func
+    funct_args = None
+    NApct_lim = max_na_pct
+    rmNApct = drop_na_pct
+    nameEX = name
+    Seasons = seasons
+    is_date = False
+    rm_duplicates = drop_duplicates
+    NAyear_lim = max_na_years
+
     if not isinstance(data, pd.DataFrame):
         raise TypeError(
             f"data doit être un DataFrame pandas, reçu {type(data).__name__}."
@@ -1009,13 +1053,13 @@ def process_extraction(
             raise ValueError(
                 "sampling_period adaptatif incompatible avec expand=True."
             )
-        _kw = dict(funct=funct, funct_args=funct_args, time_step=time_step,
-                   period=period, NApct_lim=NApct_lim, rmNApct=rmNApct,
-                   nameEX=nameEX, Seasons=Seasons, compress=compress,
-                   expand=expand, is_date=is_date, suffix=suffix,
+        _kw = dict(func=funct, time_step=time_step,
+                   period=period, max_na_pct=NApct_lim,
+                   drop_na_pct=rmNApct, name=nameEX, seasons=Seasons,
+                   compress=compress, expand=expand, suffix=suffix,
                    suffix_delimiter=suffix_delimiter,
-                   rm_duplicates=rm_duplicates, keep=keep,
-                   NAyear_lim=NAyear_lim, verbose=verbose)
+                   drop_duplicates=rm_duplicates, keep=keep,
+                   max_na_years=NAyear_lim, verbose=verbose)
         return _process_adaptive(data, sampling_period, _kw)
 
     VALID = {"year", "year-month", "month", "year-season", "season", "yearday", "none"}
@@ -1025,24 +1069,10 @@ def process_extraction(
             f"Valeurs acceptées : {sorted(VALID)}."
         )
 
-    if funct_args is not None:
-        warnings.warn(
-            "funct_args est déprécié. Intégrez colonnes et kwargs dans funct : "
-            "funct=(fn, 'col', {kwargs}) ou funct={'name': (fn, 'col', {kwargs})}.",
-            FutureWarning, stacklevel=2,
-        )
-    if is_date:
-        warnings.warn(
-            "Le paramètre is_date est déprécié. "
-            "Utilisez is_date=True dans le tuple : funct=(np.argmax, 'col', True) "
-            "ou funct={'name': (np.argmax, 'col', True)}.",
-            FutureWarning, stacklevel=2,
-        )
-
     if NApct_lim is not None:
         if not isinstance(NApct_lim, (int, float)) or not (0.0 <= NApct_lim <= 100.0):
             raise ValueError(
-                f"NApct_lim={NApct_lim!r} invalide : doit être un nombre entre 0 et 100."
+                f"max_na_pct={NApct_lim!r} invalide : doit être un nombre entre 0 et 100."
             )
 
     if sampling_period is not None and time_step not in {"year", "none"}:
@@ -1075,7 +1105,7 @@ def process_extraction(
     _total_season_months = sum(len(s) for s in Seasons)
     if _total_season_months != 12:
         raise ValueError(
-            f"Seasons invalide : la somme des longueurs doit être 12 "
+            f"seasons invalide : la somme des longueurs doit être 12 "
             f"(un caractère par mois), reçu {Seasons!r} (total={_total_season_months})."
         )
 
@@ -1120,7 +1150,7 @@ def process_extraction(
 
     if NAyear_lim is not None:
         if not isinstance(NAyear_lim, (int, float)) or NAyear_lim <= 0:
-            raise ValueError("NAyear_lim doit être un nombre strictement positif.")
+            raise ValueError("max_na_years doit être un nombre strictement positif.")
 
     if len(data) == 0:
         # Retour vide typé (meilleur effort) : colonnes attendues de la
@@ -1129,15 +1159,16 @@ def process_extraction(
         if compress or expand or keep == "all":
             return pd.DataFrame()
         try:
-            _, _id, _ = _detect_columns(data)
+            _dc, _id, _ = _detect_columns(data)
             _names = [n for (n, *_) in
                       _normalize_funct(funct, funct_args, nameEX,
                                        is_date_global=is_date)]
             if suffix:
                 _d = suffix_delimiter or "_"
                 _names = [f"{n}{_d}{s}" for n in _names for s in suffix]
-            return _empty_extraction_frame(_id if _id is not None else "ID",
-                                           time_step, _names, rmNApct)
+            return _empty_extraction_frame(_id if _id is not None else "id",
+                                           time_step, _names, rmNApct,
+                                           date_col=_dc)
         except Exception:
             return pd.DataFrame()
 
@@ -1239,7 +1270,7 @@ def process_extraction(
                 raise ValueError(
                     f"{n_dup} lignes avec dates dupliquées (série × date). "
                     f"Premiers cas :\n{sample.to_string(index=False)}\n"
-                    "Utilisez rm_duplicates=True pour supprimer automatiquement "
+                    "Utilisez drop_duplicates=True pour supprimer automatiquement "
                     "(première occurrence conservée)." + hint
                 )
 
@@ -1263,13 +1294,13 @@ def process_extraction(
                         raise ValueError(
                             f"suffix='{s}' : aucune colonne numérique ne se termine par "
                             f"'{full_s}'. Colonnes disponibles : {value_cols}. "
-                            "Spécifiez la colonne de base : funct={'nom': (fn, 'col', ...)}."
+                            "Spécifiez la colonne de base : func={'nom': (fn, 'col', ...)}."
                         )
                     if len(matches) > 1:
                         raise ValueError(
                             f"suffix='{s}' : colonnes ambiguës se terminant par "
                             f"'{full_s}': {matches}. "
-                            "Spécifiez la colonne de base dans le tuple funct."
+                            "Spécifiez la colonne de base dans le tuple func."
                         )
                     new_col_names = matches
                 expanded.append((new_name, fn, new_col_names, funct_kwargs, skip_na, var_is_date))
@@ -1307,8 +1338,9 @@ def process_extraction(
             if compress or expand or keep == "all":
                 return pd.DataFrame()
             return _empty_extraction_frame(
-                "ID" if id_col == "_id" else id_col, time_step,
+                "id" if id_col == "_id" else id_col, time_step,
                 [n for (n, *_) in funct_list], rmNApct,
+                date_col=date_col,
             )
 
     # (données déjà triées en amont ; period/NAyear préservent l'ordre)
@@ -1407,7 +1439,7 @@ def process_extraction(
                 _n_fil   = int((_na > NApct_lim).sum()) if NApct_lim is not None else 0
                 _verbose_stats.append((var_name, _n_gr, _mean_na, _max_na, _n_fil))
                 _pref = f"[{_var_idx+1}/{_n_vars}]" if _n_vars > 1 else "   "
-                _na_str = f"NApct  moy={_mean_na:.1f}%  max={_max_na:.1f}%"
+                _na_str = f"na_pct moy={_mean_na:.1f}%  max={_max_na:.1f}%"
                 _fil_str = f"  [{_n_fil} filtrés]" if NApct_lim is not None else ""
                 print(f"  {_pref} {var_name:<14} {_n_gr:>4} groupes   {_na_str}{_fil_str}")
             else:
@@ -1450,7 +1482,7 @@ def process_extraction(
         if _nv > 1:
             _footer += f"  ·  {_nv} variables"
         if _all_means:
-            _footer += (f"  ·  NApct combinée  "
+            _footer += (f"  ·  na_pct combinée  "
                         f"moy={sum(_all_means)/_nv:.1f}%  "
                         f"max={max(_all_maxes):.1f}%")
             if NApct_lim is not None:
@@ -1459,10 +1491,10 @@ def process_extraction(
 
     # --- Renommage id fictif ---
     if id_col == "_id" and "_id" in result.columns:
-        result = result.rename(columns={"_id": "ID"})
+        result = result.rename(columns={"_id": "id"})
         if data_for_keep is not None and "_id" in data_for_keep.columns:
-            data_for_keep = data_for_keep.rename(columns={"_id": "ID"})
-        id_col = "ID"
+            data_for_keep = data_for_keep.rename(columns={"_id": "id"})
+        id_col = "id"
 
     # --- keep="all" : fan-out vers le nombre de lignes d'origine ---
     if keep == "all" and data_for_keep is not None:
@@ -1512,6 +1544,11 @@ def process_extraction(
                 out_sparse |= set(var_names)
             if out_sparse:
                 result.attrs[_SPARSE_ATTR] = sorted(out_sparse)
+
+        # noms de sortie : snake_case, date au nom de la colonne d'entrée
+        result = _finalize_names(result, date_col)
+    elif isinstance(result, dict):
+        result = {k: _finalize_names(v, date_col) for k, v in result.items()}
 
     return result
 
@@ -1692,7 +1729,8 @@ def _extract_year(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
 
     if len(data) == 0:
         warnings.warn("Aucune donnée dans la fenêtre d'échantillonnage.")
-        return _empty_extraction_frame(id_col, "year", [nameEX], rmNApct)
+        return _empty_extraction_frame(id_col, "year", [nameEX], rmNApct,
+                                       finalize=False)
 
     ext = _groupby_agg(data, [id_col, "_hy"], col_name, funct, funct_kwargs, skip_na)
 
@@ -2047,7 +2085,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
     if any_vector:
         if NApct_lim is not None:
             warnings.warn(
-                f"NApct_lim ignoré pour '{nameEX}' : sortie vectorielle "
+                f"max_na_pct ignoré pour '{nameEX}' : sortie vectorielle "
                 "(transform/ragged) en time_step 'none'."
             )
         parts = []
@@ -2141,7 +2179,7 @@ def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
         if len(monthly) == 0:
             fallback_ids.append(gid)
             return spec.default
-        target = spec.funct(monthly.to_numpy())
+        target = spec.func(monthly.to_numpy())
         matches = monthly.index[monthly == target]
         if len(matches) == 0:
             # funct n'a pas retourné une des moyennes mensuelles
@@ -2192,8 +2230,8 @@ def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
     if len(parts) == 1:
         return parts[0]
     result = pd.concat(parts, ignore_index=True)   # concat perd les attrs
-    sort_cols = [c for c in (id_col, "Date", date_col)
-                 if c in result.columns][:2]
+    sort_cols = [c for c in (id_col, date_col)
+                 if c is not None and c in result.columns][:2]
     if sort_cols:
         result = result.sort_values(sort_cols).reset_index(drop=True)
     if out_sparse:

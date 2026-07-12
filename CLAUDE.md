@@ -54,12 +54,14 @@ docs/img/         # figures du README (déposées manuellement)
 
 ## API
 
-Canonique : `stase.extract` et `stase.trend` (les noms R
-process_extraction / process_trend / GeneralMannKendall /
-fieldSignificance_FDR restent en alias). Style : pas de préfixe
-redondant, le namespace du package porte le contexte. Docs : pas de
-tirets longs dans la prose, références R limitées à une mention
-(détails dans docs/dev/ORIGINE_R.md).
+Canonique : `stase.extract` et `stase.trend` (les noms de fonctions R
+restent en alias, mais paramètres et colonnes de sortie sont renommés
+sec : table dans docs/dev/RENAMING_PY.md ; la colonne de date de sortie
+reprend le nom de la colonne d'entrée). En interne, extraction.py et
+trend.py gardent les noms historiques via un pont en tête de fonction :
+ne pas « nettoyer » ce pont, il isole la logique validée par les
+goldens. Style : pas de préfixe redondant, pas de tirets longs dans la
+prose, références R limitées à une mention (docs/dev/ORIGINE_R.md).
 
 ## Commandes
 

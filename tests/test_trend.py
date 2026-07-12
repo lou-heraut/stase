@@ -15,9 +15,18 @@ from stase import process_trend
 
 REF = Path(__file__).parent / "data" / "ref_trend"
 
-NUM_BASE = ["p", "a", "b", "mean_period_trend", "a_normalise",
-            "a_normalise_min", "a_normalise_max"]
-DATE_BASE = ["period_trend_start", "period_trend_end"]
+# les CSVs de référence R gardent les noms historiques : on les traduit
+# vers les noms de sortie Python avant comparaison
+_REF_RENAMES = {"variable_en": "variable",
+                "a_normalise": "a_relative",
+                "a_normalise_min": "a_relative_min",
+                "a_normalise_max": "a_relative_max",
+                "mean_period_trend": "mean_period",
+                "period_trend_start": "period_start",
+                "period_trend_end": "period_end"}
+NUM_BASE = ["p", "a", "b", "mean_period", "a_relative",
+            "a_relative_min", "a_relative_max"]
+DATE_BASE = ["period_start", "period_end"]
 
 
 @pytest.fixture(scope="module")
@@ -28,8 +37,8 @@ def raw():
 
 
 def assert_matches_ref(py, ref_name, numeric_cols, date_cols=(), atol=1e-10):
-    ref = pd.read_csv(REF / f"{ref_name}.csv")
-    key = ["ID", "variable_en"]
+    ref = pd.read_csv(REF / f"{ref_name}.csv").rename(columns=_REF_RENAMES)
+    key = ["ID", "variable"]
     py = py.sort_values(key).reset_index(drop=True)
     ref = ref.sort_values(key).reset_index(drop=True)
     assert len(py) == len(ref), f"longueurs py={len(py)} R={len(ref)}"
@@ -54,31 +63,31 @@ def assert_matches_ref(py, ref_name, numeric_cols, date_cols=(), atol=1e-10):
 # ── Goldens R ────────────────────────────────────────────────────────────────
 
 def test_sc1_inde_normalise(raw):
-    py = process_trend(raw, MK_level=0.1, time_dependency_option="INDE",
-                       to_normalise=True, verbose=False)
+    py = process_trend(raw, level=0.1, dependency="INDE",
+                       relative=True, verbose=False)
     assert_matches_ref(py, "pt_sc1_inde_norm", NUM_BASE, DATE_BASE)
 
 
 def test_sc2_ar1_no_normalise(raw):
-    py = process_trend(raw, MK_level=0.1, time_dependency_option="AR1",
-                       to_normalise=False, verbose=False)
+    py = process_trend(raw, level=0.1, dependency="AR1",
+                       relative=False, verbose=False)
     assert_matches_ref(py, "pt_sc2_ar1_nonorm",
-                       ["p", "a", "b", "a_normalise",
-                        "a_normalise_min", "a_normalise_max"],
+                       ["p", "a", "b", "a_relative",
+                        "a_relative_min", "a_relative_max"],
                        DATE_BASE)
 
 
 def test_sc3_inde_period_trend(raw):
-    py = process_trend(raw, MK_level=0.1, time_dependency_option="INDE",
-                       to_normalise=True,
-                       period_trend=["1995-01-01", "2010-12-31"],
+    py = process_trend(raw, level=0.1, dependency="INDE",
+                       relative=True,
+                       period=["1995-01-01", "2010-12-31"],
                        verbose=False)
     assert_matches_ref(py, "pt_sc3_inde_period", NUM_BASE, DATE_BASE)
 
 
 def test_sc4_inde_period_change(raw):
-    py = process_trend(raw, MK_level=0.1, time_dependency_option="INDE",
-                       to_normalise=True,
+    py = process_trend(raw, level=0.1, dependency="INDE",
+                       relative=True,
                        period_change=[["1990-01-01", "2004-12-31"],
                                       ["2005-01-01", "2019-12-31"]],
                        verbose=False)
@@ -92,9 +101,9 @@ def test_sc4_inde_period_change(raw):
 
 
 def test_sc5_extreme_no_signif(raw):
-    py = process_trend(raw, MK_level=0.1, time_dependency_option="INDE",
-                       to_normalise=True,
-                       extreme_take_not_signif_into_account=False,
+    py = process_trend(raw, level=0.1, dependency="INDE",
+                       relative=True,
+                       extremes_include_non_significant=False,
                        verbose=False)
     assert_matches_ref(py, "pt_sc5_extreme_nosignif", NUM_BASE)
 
@@ -156,12 +165,12 @@ def test_ltp_seed_reproducible_end_to_end():
     data = _yearly(slope=0.2, n=35)
     data["X"] = data["X"].round(0)
     with pytest.warns(UserWarning, match="ex-æquo"):
-        t_noseed = process_trend(data, time_dependency_option="LTP",
+        t_noseed = process_trend(data, dependency="LTP",
                                  verbose=False)
     assert len(t_noseed) == 1
-    t1 = process_trend(data, time_dependency_option="LTP", seed=7,
+    t1 = process_trend(data, dependency="LTP", seed=7,
                        verbose=False)
-    t2 = process_trend(data, time_dependency_option="LTP", seed=7,
+    t2 = process_trend(data, dependency="LTP", seed=7,
                        verbose=False)
     pd.testing.assert_frame_equal(t1, t2)
 
@@ -174,19 +183,19 @@ def test_ltp_long_series_warns():
     data = pd.DataFrame({"ID": "S1", "Date": dates,
                          "X": rng.normal(10, 1, 210)})
     with pytest.warns(UserWarning, match="O\\(n⁴\\)"):
-        t = process_trend(data, time_dependency_option="LTP",
+        t = process_trend(data, dependency="LTP",
                           seed=1, verbose=False)
     assert np.isfinite(t.p.iloc[0])
 
 
 def test_period_trend_outside_data_returns_typed_empty():
     with pytest.warns(UserWarning):
-        t = process_trend(_yearly(), period_trend=["2050-01-01", "2060-12-31"],
+        t = process_trend(_yearly(), period=["2050-01-01", "2060-12-31"],
                           verbose=False)
     assert len(t) == 0
     # colonnes standard présentes : les accès aval fonctionnent
-    for c in ("ID", "variable_en", "H", "p", "a", "b",
-              "period_trend_start", "a_normalise_min"):
+    for c in ("ID", "variable", "H", "p", "a", "b",
+              "period_start", "a_relative_min"):
         assert c in t.columns
     assert t.H.dtype == "boolean"
     assert len(t[t.H == True]) == 0                      # noqa: E712

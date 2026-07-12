@@ -6,7 +6,7 @@ Agrégation de séries temporelles journalières en variables temporelles
 
 Usage :
     import stase
-    dataEX  = stase.extract(data, funct={"QA": (np.nanmean, "Q")},
+    dataEX  = stase.extract(data, func={"QA": (np.nanmean, "Q")},
                             time_step="year")
     trendEX = stase.trend(dataEX)
 """

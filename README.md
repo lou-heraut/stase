@@ -37,7 +37,7 @@ data = pd.DataFrame({
 })
 
 # moyenne annuelle sur l'année hydrologique (départ 1er septembre)
-qa = stase.extract(data, funct={"QA": (np.nanmean, "Q")},
+qa = stase.extract(data, func={"QA": (np.nanmean, "Q")},
                    time_step="year", sampling_period="09-01")
 
 # tendance : Mann-Kendall + pente de Sen, une ligne par série
@@ -55,7 +55,7 @@ doivent être convertis en texte : `data["code"].astype(str)`.
 
 - `time_step` : year, year-month, month, year-season, season, yearday,
   none.
-- `funct` en tuples `(fn, *colonnes_ou_littéraux, kwargs?, is_date?)`,
+- `func` en tuples `(fn, *colonnes_ou_littéraux, kwargs?, is_date?)`,
   plusieurs variables par appel via un dict. Un kwarg dont la valeur est
   un nom de colonne reçoit la colonne alignée sur le groupe (ex.
   `{"lim": "upLim"}`).
@@ -66,8 +66,8 @@ doivent être convertis en texte : `data["code"].astype(str)`.
   les agrégations (ex. QMNA : moyenne mensuelle puis min annuel).
 - Sorties dynamiques en `time_step="none"` : scalaire, colonne alignée
   (moyenne mobile) ou lignes libres (courbe des débits classés).
-- Filtres de lacunes : `NApct_lim` (taux de lacunes par échantillon) et
-  `NAyear_lim` (troncature des séries à trous pluriannuels).
+- Filtres de lacunes : `max_na_pct` (taux de lacunes par échantillon) et
+  `max_na_years` (troncature des séries à trous pluriannuels).
 - `stase.trend` : options `INDE` (test standard), `AR1` (correction
   d'autocorrélation) et `LTP` (persistance longue, coefficient de
   Hurst ; prévu pour des séries annuelles, passer `seed=` pour des

@@ -41,35 +41,35 @@ def bench(label, fn):
 
 results = {}
 _, results["QA"] = bench("QA", lambda: process_extraction(
-    data, funct={"QA": (np.nanmean, "Qm3s")}, time_step="year"))
+    data, func={"QA": (np.nanmean, "Qm3s")}, time_step="year"))
 qa, _ = bench("QA(bis)", lambda: process_extraction(
-    data, funct={"QA": (np.nanmean, "Qm3s")}, time_step="year"))
+    data, func={"QA": (np.nanmean, "Qm3s")}, time_step="year"))
 _, results["QJXA"] = bench("QJXA 09-01", lambda: process_extraction(
-    data, funct={"QJXA": (np.nanmax, "Qm3s")}, time_step="year",
+    data, func={"QJXA": (np.nanmax, "Qm3s")}, time_step="year",
     sampling_period="09-01"))
 _, results["tQJXA"] = bench("tQJXA is_date", lambda: process_extraction(
-    data, funct={"tQJXA": (np.nanargmax, "Qm3s", True)}, time_step="year",
+    data, func={"tQJXA": (np.nanargmax, "Qm3s", True)}, time_step="year",
     sampling_period="09-01"))
 
 def qmna():
-    m = process_extraction(data, funct={"QM": (np.nanmean, "Qm3s")},
+    m = process_extraction(data, func={"QM": (np.nanmean, "Qm3s")},
                            time_step="year-month")
-    return process_extraction(m, funct={"QMNA": (np.nanmin, "QM")},
+    return process_extraction(m, func={"QMNA": (np.nanmin, "QM")},
                               time_step="year")
 _, results["QMNA"] = bench("QMNA 2 etapes", qmna)
 
 def vcn10():
     def roll10(x):
         return pd.Series(np.asarray(x, float)).rolling(10, min_periods=10).mean().to_numpy()
-    r = process_extraction(data, funct={"Q10": (roll10, "Qm3s")},
+    r = process_extraction(data, func={"Q10": (roll10, "Qm3s")},
                            time_step="none", keep="all")
-    return process_extraction(r, funct={"VCN10": (np.nanmin, "Q10")},
+    return process_extraction(r, func={"VCN10": (np.nanmin, "Q10")},
                               time_step="year", sampling_period="09-01")
 _, results["VCN10"] = bench("VCN10 roll+min", vcn10)
 
 # multi-variables en un appel (cas card typique)
 _, results["multi4"] = bench("4 vars 1 appel", lambda: process_extraction(
-    data, funct={"QA": (np.nanmean, "Qm3s"), "QJXA": (np.nanmax, "Qm3s"),
+    data, func={"QA": (np.nanmean, "Qm3s"), "QJXA": (np.nanmax, "Qm3s"),
                  "QNA": (np.nanmin, "Qm3s"), "QMED": (np.nanmedian, "Qm3s")},
     time_step="year"))
 

@@ -34,6 +34,8 @@ Ces écarts sont assumés et ne seront pas « corrigés » :
 
 ## Noms hérités du R
 
-L'API canonique est `stase.extract` / `stase.trend`. Les noms du R
-restent valides en alias : `process_extraction`, `process_trend`,
-`GeneralMannKendall`, `fieldSignificance_FDR`.
+L'API canonique est `stase.extract` / `stase.trend`. Les noms de
+fonctions du R restent valides en alias (`process_extraction`,
+`process_trend`, `GeneralMannKendall`, `fieldSignificance_FDR`), mais
+les paramètres et colonnes de sortie utilisent les nouveaux noms partout
+(renommage sec) : table complète dans [RENAMING_PY.md](RENAMING_PY.md).
