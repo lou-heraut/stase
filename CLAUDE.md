@@ -31,7 +31,8 @@ tests/
   test_tools.py              # 13 goldens MK R + cas limites figés
   test_trend.py              # 5 goldens process_trend R + cas limites
   data/                      # CSVs de référence R (repo auto-suffisant)
-PLAN.md           # audit 2026-07-12 + plan d'amélioration (suivi à jour)
+docs/dev/PLAN.md  # audit 2026-07-12 + plan d'amélioration (suivi à jour)
+docs/img/         # figures du README (déposées manuellement)
 ```
 
 ## Règles du projet (décisions utilisateur, 2026-07-12)

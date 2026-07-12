@@ -8,7 +8,10 @@ argmax positionnel Cython) :
     QA 1.8s · QJXA 1.7s · tQJXA 3.0s · QMNA 2.5s · VCN10 2.9s ·
     4 vars 2.7s · trend 0.2s — total ~14.9s (avant : ~24.9s)
 """
-import sys, time, glob, warnings
+import sys
+import time
+import glob
+import warnings
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import numpy as np

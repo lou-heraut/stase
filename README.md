@@ -1,6 +1,14 @@
 # stase
 
+<!-- Badge CI à activer après le push GitHub :
+[![tests](https://github.com/<owner>/stase/actions/workflows/tests.yml/badge.svg)](https://github.com/<owner>/stase/actions/workflows/tests.yml)
+-->
+
 **STASE** — *STatistical Aggregation & Stationarity Evaluation*.
+
+<!-- Figure d'illustration (à déposer dans docs/img/, cf. docs/img/README.md) :
+![Schéma du pipeline stase](docs/img/pipeline.png)
+-->
 
 Port Python du package R **EXstat** : extraction et agrégation de
 variables hydroclimatiques à partir de séries temporelles journalières,
@@ -93,14 +101,24 @@ DataFrame nu.
   séparées (`period_trend_start`/`period_trend_end`, etc.) et `H` est un
   booléen nullable.
 
+## Installation
+
+Depuis GitHub (pas de publication PyPI pour l'instant) :
+
+```bash
+pip install "stase @ git+https://github.com/<owner>/stase.git"
+```
+
+Pour le développement : cloner le repo puis `pip install -e .`
+(environnement virtuel), ou simplement ajouter `src/` au PYTHONPATH.
+
 ## Développement
 
-Sans installation : ajouter `src/` au PYTHONPATH. Sinon
-`pip install -e .` (environnement virtuel).
-
 Tests : `pytest` (goldens R inclus dans `tests/data/` — le repo est
-auto-suffisant pour la non-régression). Le plan d'amélioration en cours
-est dans `PLAN.md`.
+auto-suffisant pour la non-régression). CI : `.github/workflows/tests.yml`
+(pytest sur matrice Python × pandas + ruff). Benchmark données réelles :
+`benchmarks/bench_rrse.py`. Le plan d'amélioration et son suivi sont
+dans `docs/dev/PLAN.md`.
 
 Le package `card` (CARD_project/card) utilise stase comme moteur pour
 exécuter les fiches CARD YAML.

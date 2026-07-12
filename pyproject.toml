@@ -29,3 +29,10 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+[tool.ruff.lint.per-file-ignores]
+# tools.py est un port gelé de tools.R : les noms de variables 'l' et 'I'
+# suivent les notations du code R/des équations (Hamed 2008)
+"src/stase/tools.py" = ["E741"]
+# le benchmark configure warnings avant d'importer stase (imports tardifs voulus)
+"benchmarks/*" = ["E402"]

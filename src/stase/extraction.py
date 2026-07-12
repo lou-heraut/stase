@@ -558,7 +558,8 @@ def _groupby_agg(
         if not funct_kwargs and funct in _PANDAS_AGG_ALIASES:
             agg_fn = _PANDAS_AGG_ALIASES[funct]
         elif funct_kwargs:
-            agg_fn = lambda x: funct(x, **funct_kwargs)
+            def agg_fn(x, _fn=funct, _kw=funct_kwargs):
+                return _fn(x, **_kw)
         else:
             agg_fn = funct
 
