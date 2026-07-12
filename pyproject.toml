@@ -16,7 +16,7 @@ maintainers = [{name = "Louis Héraut", email = "louis.heraut@inrae.fr"}]
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
-    "pandas>=2.0",
+    "pandas>=2.2",
     "scipy",
 ]
 

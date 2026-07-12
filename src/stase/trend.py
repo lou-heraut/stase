@@ -449,7 +449,7 @@ def process_trend(
             # ── MK + intercept + normalise per series ────────────────────────
             mk_df = (
                 var_data
-                .groupby(id_col)
+                .groupby(id_col, observed=True)
                 .apply(
                     _mk_series,
                     var=var,
@@ -470,7 +470,7 @@ def process_trend(
             if pc_pairs is not None:
                 ch_df = (
                     var_data
-                    .groupby(id_col)
+                    .groupby(id_col, observed=True)
                     .apply(
                         _change_series,
                         var=var,
@@ -508,7 +508,7 @@ def process_trend(
             saved_a_norm = period_df["a_normalise"].copy()
             period_df.loc[~period_df["H"].fillna(False), "a_normalise"] = np.nan
 
-        for var_grp, grp_idx in period_df.groupby(group_var).groups.items():
+        for var_grp, grp_idx in period_df.groupby(group_var, observed=True).groups.items():
             grp_mask = period_df.index.isin(grp_idx)          # boolean mask for this group
             sel_mask = grp_mask & in_series.values
             a_vals = period_df.loc[sel_mask, "a_normalise"].dropna()
@@ -522,7 +522,7 @@ def process_trend(
 
         # ── Extreme change quantiles ─────────────────────────────────────────
         if pc_pairs is not None and "change" in period_df.columns:
-            for var_grp, grp_idx in period_df.groupby(group_var).groups.items():
+            for var_grp, grp_idx in period_df.groupby(group_var, observed=True).groups.items():
                 grp_mask = period_df.index.isin(grp_idx)
                 sel_mask = grp_mask & in_series.values
                 ch_vals = period_df.loc[sel_mask, "change"].dropna()

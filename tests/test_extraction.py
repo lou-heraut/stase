@@ -192,6 +192,22 @@ def test_sparse_fanout_then_compact():
     assert not np.isnan(vals.iloc[0])
 
 
+# ── séries fantômes : filtre period × catégories ────────────────────────────
+
+@pytest.mark.parametrize("time_step", ["year", "year-month", "month",
+                                       "year-season", "season", "yearday",
+                                       "none"])
+def test_no_ghost_series_after_period_filter(time_step):
+    # S2 s'arrête fin 2001 ; period ne garde que 2003+ → S2 ne doit pas
+    # apparaître dans la sortie (même pas en NaN), quel que soit time_step
+    data = daily(ids=("S1", "S2"))
+    data = data[(data.id == "S1") | (data.date < "2002-01-01")]
+    r = process_extraction(data, funct={"X": (np.nanmean, "Q")},
+                           time_step=time_step,
+                           period=["2003-01-01", "2004-12-31"])
+    assert set(r[r.columns[0]].unique()) == {"S1"}
+
+
 # ── NAyear_lim ──────────────────────────────────────────────────────────────
 
 def test_nayear_lim_truncates():

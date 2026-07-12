@@ -262,7 +262,7 @@ def _apply_is_date(
     Output _value may be negative or >365 — this is intentional for trend analysis.
     """
     min_dates = (
-        data_with_hy.groupby([id_col, "_hy"])[date_col].min()
+        data_with_hy.groupby([id_col, "_hy"], observed=True)[date_col].min()
         .rename("_rss").reset_index()
     )
     ext = ext.merge(min_dates, on=[id_col, "_hy"], how="left")
@@ -381,7 +381,7 @@ def _groupby_agg(
     primary_col = col_names[0]
     is_single = len(col_names) == 1
 
-    g = data.groupby(grp_keys, sort=True)
+    g = data.groupby(grp_keys, sort=True, observed=True)
 
     # Comptage C-level sur la colonne primaire
     n_present = g[primary_col].size().rename("_nPresent")
@@ -401,7 +401,7 @@ def _groupby_agg(
             is_na = data[primary_col].isna()
             values = (
                 data.loc[~is_na]
-                .groupby(grp_keys, sort=True)[primary_col]
+                .groupby(grp_keys, sort=True, observed=True)[primary_col]
                 .agg(agg_fn)
                 .rename("_value")
                 .reindex(n_present.index)
@@ -1020,7 +1020,7 @@ def process_extraction(
                 n_dup = int(dup_mask.sum())
                 sample = (
                     data[dup_mask]
-                    .groupby([id_col, date_col], sort=False)
+                    .groupby([id_col, date_col], sort=False, observed=True)
                     .size()
                     .reset_index(name="n")
                     .head(5)
@@ -1355,7 +1355,7 @@ def _apply_nayear_lim(data: pd.DataFrame, id_col: str, date_col: str,
                       value_cols: list[str], nayear_lim: float) -> pd.DataFrame:
     """Applique _missing_year_hide par (série, variable) sur les données brutes."""
     data = data.copy()
-    for _, grp in data.groupby(id_col, sort=False):
+    for _, grp in data.groupby(id_col, sort=False, observed=True):
         grp_s = grp.sort_values(date_col)
         dates_np = grp_s[date_col].to_numpy()
         idx = grp_s.index
@@ -1545,7 +1545,7 @@ def _extract_month(data, id_col, date_col, col_name, funct, funct_kwargs, skip_n
 
     ext = _groupby_agg(data, [id_col, "_month"], col_name, funct, funct_kwargs, skip_na)
 
-    yr = data.groupby(id_col)[date_col].agg(
+    yr = data.groupby(id_col, observed=True)[date_col].agg(
         _min_year=lambda s: s.dt.year.min(),
         _nyears=lambda s: s.dt.year.max() - s.dt.year.min() + 1,
     )
@@ -1667,7 +1667,7 @@ def _extract_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_
 
     # year_ref = year(minSampleStart) — même logique que R
     # minSampleStart = premier jour de la saison contenant la première date de la série
-    min_dates = data.groupby(id_col)[date_col].min()
+    min_dates = data.groupby(id_col, observed=True)[date_col].min()
     mm_min = min_dates.dt.month.to_numpy()
     yy_min = min_dates.dt.year.to_numpy()
     sub_min = sub_np[mm_min - 1]
@@ -1676,7 +1676,7 @@ def _extract_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_
     year_ref_s = pd.Series(year_ref, index=min_dates.index, name="_year_ref")
 
     # Statistiques par id pour NApct
-    yr = data.groupby(id_col)[date_col].agg(
+    yr = data.groupby(id_col, observed=True)[date_col].agg(
         _min_year=lambda s: s.dt.year.min(),
         _nyears=lambda s: s.dt.year.max() - s.dt.year.min() + 1,
     )
@@ -1732,7 +1732,7 @@ def _extract_yearday(data, id_col, date_col, col_name, funct, funct_kwargs, skip
 
     ext = _groupby_agg(data, [id_col, "_yd"], col_name, funct, funct_kwargs, skip_na)
 
-    yr = data.groupby(id_col)[date_col].agg(
+    yr = data.groupby(id_col, observed=True)[date_col].agg(
         _min_year=lambda s: s.dt.year.min(),
         _nYear=lambda s: s.dt.year.max() - s.dt.year.min(),   # = R : max - min (pas +1)
     )
@@ -1788,7 +1788,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
     vec_results: list[tuple] = []         # (id, sub_df, vector | None)
     any_vector = False
 
-    for gid, g in data.groupby(id_col, observed=False, sort=True):
+    for gid, g in data.groupby(id_col, observed=True, sort=True):
         n_present = len(g)
         n_na = int(g[primary].isna().sum()) if n_present else 0
         sub = g
@@ -1845,7 +1845,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
                        columns=[id_col, "_nPresent", "_nNA", "_value"])
 
     if date_col is not None:
-        dr = data.groupby(id_col)[date_col].agg(
+        dr = data.groupby(id_col, observed=True)[date_col].agg(
             _min_date=lambda s: s.min(),
             _max_date=lambda s: s.max(),
         )
