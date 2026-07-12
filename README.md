@@ -1,12 +1,13 @@
-# stase
+# stase [<img src="docs/img/flower.png" align="right" width="160" height="160" alt="stase"/>](https://github.com/lou-heraut/card)
 
+<!-- badges: start -->
 [![tests](https://github.com/lou-heraut/stase/actions/workflows/tests.yml/badge.svg)](https://github.com/lou-heraut/stase/actions/workflows/tests.yml)
+[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue)](https://lifecycle.r-lib.org/articles/stages.html)
+![](https://img.shields.io/github/last-commit/lou-heraut/stase)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-bd0000)](LICENSE)
+<!-- badges: end -->
 
 **STASE** — *STatistical Aggregation & Stationarity Evaluation*.
-
-<!-- Figure d'illustration (à déposer dans docs/img/, cf. docs/img/README.md) :
-![Schéma du pipeline stase](docs/img/pipeline.png)
--->
 
 Port Python du package R **EXstat** : extraction et agrégation de
 variables hydroclimatiques à partir de séries temporelles journalières,
