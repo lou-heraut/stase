@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "exstat"
+version = "0.1.0"
+description = "EXstat — extraction and trend analysis of hydroclimatic variables from daily time series (Python port of the EXstat R package)"
+license = {text = "AGPL-3.0-or-later"}
+authors = [
+    {name = "Louis Héraut", email = "louis.heraut@inrae.fr"},
+    {name = "Benjamin Renard", email = "benjamin.renard@inrae.fr"},
+    {name = "Valentin Mansanarez"},
+]
+maintainers = [{name = "Louis Héraut", email = "louis.heraut@inrae.fr"}]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pandas>=2.0",
+    "scipy",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::RuntimeWarning", "ignore::FutureWarning", "ignore::UserWarning"]
