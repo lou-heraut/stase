@@ -24,7 +24,9 @@ contre R) : rien à y corriger.
 
 ## Phase 1 — Correctifs de fiabilité (bugs confirmés)
 
-### 1.1 Stations fantômes en `time_step='none'` après filtre `period`
+### 1.1 Séries fantômes en `time_step='none'` après filtre `period`
+> ✅ **Fait (2026-07-12)** — `observed=True` explicite sur tous les
+> groupby (extraction + trend), test paramétré sur les 7 time_steps.
 `_extract_none` fait `groupby(id_col, observed=False)` explicitement
 (extraction.py:1781). La colonne id étant convertie en Categorical **avant**
 le filtre `period`, une station entièrement exclue par `period` reste comme
@@ -39,6 +41,8 @@ extraction.py:1915). Vérifier au passage tous les `groupby` du package pour
 fixer `observed=` explicitement (le défaut a changé entre pandas 2 et 3).
 
 ### 1.2 Corruption des IDs multiples dans `process_trend`
+> ✅ **Fait (2026-07-12)** — séparateur interne `\x1f` (unit separator),
+> split retour sans perte, test avec `_` dans les IDs.
 trend.py:294 unit les colonnes id avec `"_"`, puis trend.py:550 re-split
 avec `n=len(cols)-1`. Si le **premier** id contient un `_`, le split coupe
 au mauvais endroit. Reproduit : id=`S_1`, model=`M1` → sortie id=`S`,
@@ -49,6 +53,7 @@ final sur la clé) ou utiliser un séparateur non imprimable (`"\x1f"`) pour
 l'interne uniquement. Ajouter un test avec `_` dans les IDs.
 
 ### 1.3 Colonne `H` en dtype object avec `None`
+> ✅ **Fait (2026-07-12)** — `H` en booléen nullable (pd.NA), testé.
 Une station avec n<3 valeurs valides donne `H=None` → la colonne `H`
 devient object (mélange bool/None). `trendEX[trendEX.H]` plante et tout
 filtrage booléen devient fragile. Reproduit.
@@ -76,6 +81,7 @@ Zéro changement d'API ni de comportement de détection.
 > README, helpers internes renommés (`_mk_series`, `_change_series`).
 
 ### 1.5 Contrainte de dépendance pandas incorrecte
+> ✅ **Fait (2026-07-12)** — `pandas>=2.2`, `observed=` fixé partout.
 pyproject déclare `pandas>=2.0`, mais `trend.py` utilise
 `include_groups=False` (pandas ≥ 2.2) **sans** le fallback try/except
 présent dans extraction.py, et le comportement `observed` diffère entre
@@ -148,6 +154,10 @@ Ajouter `.pytest_cache/` au .gitignore.
 > pas millénaires »), sans toucher au code.
 
 ### 3.3 Validation d'entrées complémentaires
+> ✅ **Fait (2026-07-12)** — format `MM-DD` validé (ValueError claire),
+> warning agrégé du repli Adaptive (liste des séries concernées),
+> kwargs-références affichés en mode verbose (silencieux sinon — card),
+> ambiguïté bool documentée (docstring + README).
 - `sampling_period` : valider le format `MM-DD` (regex) avec message
   clair — aujourd'hui un format invalide donne une erreur pandas obscure.
 - `Adaptive` : si `funct` retourne une valeur absente des moyennes
@@ -166,6 +176,9 @@ Ajouter `.pytest_cache/` au .gitignore.
 ## Phase 4 — Efficacité
 
 ### 4.1 Hydro-year calculé une fois par appel (pas par variable)
+> ✅ **Fait (2026-07-12)** — clés `_hy`/`_ym`/`_month`/`_season_*`/`_yd`
+> calculées au premier usage, réutilisées ensuite. Benchmark 50 séries ×
+> 40 ans × 4 variables : year −29 %, year-season −52 %.
 En multi-variables, `_extract_year` recalcule `_assign_hydro_year` (scan
 complet O(N)) pour **chaque** variable alors que `sampling_period` est
 identique. Factoriser : assigner `_hy` une fois avant la boucle des
@@ -173,6 +186,9 @@ functs. Idem `_ym`/`_season_*` pour les autres time_steps. Gain attendu
 sensible sur les fiches CARD multi-variables sur 5M lignes.
 
 ### 4.2 Micro-optimisations (opportunistes, si mesurées utiles)
+> ✅ **Fait (2026-07-12)** — dup_check trend vectorisé, cache Date
+> year-season. benchmark_real.py (EXstat_Claude) non rejoué : à faire à
+> l'occasion sur les données RRSE.
 - trend.py:299 `groupby().apply(lambda s: s.duplicated().any())` →
   `dataEX.duplicated([id_col, date_col]).any()` (vectorisé).
 - `_extract_year_season` : caches Date par clé unique comme dans
@@ -184,6 +200,9 @@ sensible sur les fiches CARD multi-variables sur 5M lignes.
 ## Phase 5 — UX et documentation
 
 ### 5.1 Réécrire CLAUDE.md
+> ✅ **Fait (2026-07-12)** — CLAUDE.md réécrit pour stase : structure,
+> règles du projet (tools.py gelé, détection par type, wording « série »),
+> notes d'architecture, commandes.
 L'actuel décrit l'arborescence d'EXstat_Claude (`EXstat_py/`, chemins de
 venv et scripts inexistants ici). Le réécrire pour stase : structure
 src/, tests, lien card, divergences R conservées (résumé), commandes.
@@ -191,6 +210,9 @@ L'historique de conversion détaillé peut rester référencé vers
 EXstat_Claude.
 
 ### 5.2 Cohérence de l'API
+> ✅ **Fait (2026-07-12)** — verbose=False partout, alias snake_case
+> exportés, `_verbose_box` partagé (`_display.py`). Non fait : retours
+> vides avec colonnes attendues (reporté — comportement à concevoir).
 - `verbose` : défaut `False` dans process_extraction, `True` dans
   process_trend → harmoniser sur `False`.
 - Alias snake_case validés par l'utilisateur (2026-07-12) :
@@ -204,6 +226,10 @@ EXstat_Claude.
   en aval).
 
 ### 5.3 Documentation utilisateurice
+> ✅ **Partiellement fait (2026-07-12)** — README enrichi (exemple
+> process_trend, détection par type, options MK et limites LTP,
+> divergences R intentionnelles). Reste : harmonisation FR des
+> docstrings de trend.py, py.typed (reportés — faible priorité).
 - README : ajouter une section API courte (formats des tuples funct,
   `keep`, colonnes creuses/attrs, NApct et ses divergences R
   intentionnelles) + un exemple process_trend complet.
