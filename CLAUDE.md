@@ -52,6 +52,15 @@ docs/img/         # figures du README (déposées manuellement)
 3. **Wording générique.** Jamais « station » dans les messages, la doc ou
    le code : dire « série ». stase est agnostique du domaine.
 
+## API
+
+Canonique : `stase.extract` et `stase.trend` (les noms R
+process_extraction / process_trend / GeneralMannKendall /
+fieldSignificance_FDR restent en alias). Style : pas de préfixe
+redondant, le namespace du package porte le contexte. Docs : pas de
+tirets longs dans la prose, références R limitées à une mention
+(détails dans docs/dev/ORIGINE_R.md).
+
 ## Commandes
 
 ```bash
