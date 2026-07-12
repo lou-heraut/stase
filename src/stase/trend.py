@@ -32,6 +32,12 @@ import pandas as pd
 
 from .tools import GeneralMannKendall
 
+# Séparateur interne pour unir plusieurs colonnes identifiantes en une
+# clé de groupement unique. Caractère de contrôle ASCII (unit separator) :
+# ne peut pas apparaître dans un identifiant réel, le split retour est
+# donc sans ambiguïté même si les identifiants contiennent '_'.
+_ID_SEP = "\x1f"
+
 
 # ── Verbose helper (same style as process_extraction._verbose_box) ────────────
 
@@ -290,17 +296,22 @@ def process_trend(
     elif len(id_cols) == 1:
         id_col = id_cols[0]
     else:
-        # Multiple ID cols: unite with "_" (same as R's tidyr::unite)
-        dataEX["_ID_united"] = dataEX[id_cols].astype(str).agg("_".join, axis=1)
+        # Multiple ID cols: unite them into a single grouping key. The
+        # separator is a control character that cannot appear in real IDs,
+        # so the split back at the end is lossless even when IDs contain
+        # the display delimiter (e.g. "S_1"). R's tidyr::unite uses "_"
+        # and has the ambiguity; we don't reproduce it.
+        dataEX["_ID_united"] = (
+            dataEX[id_cols].astype(str).agg(_ID_SEP.join, axis=1)
+        )
         dataEX = dataEX.drop(columns=id_cols)
         id_col = "_ID_united"
 
-    # Check date uniqueness per series
-    dup_check = dataEX.groupby(id_col)[date_col].apply(
-        lambda s: s.duplicated().any()
-    )
-    if dup_check.any():
-        bad = dup_check[dup_check].index.tolist()[:5]
+    # Check date uniqueness per series (vectorized)
+    dup_mask = dataEX.duplicated(subset=[id_col, date_col])
+    if dup_mask.any():
+        bad = dataEX.loc[dup_mask, id_col].unique().tolist()[:5]
+        bad = [str(b).replace(_ID_SEP, "_") for b in bad]
         raise ValueError(
             f"Dates dupliquées dans les séries : {bad}. "
             "Utilisez rm_duplicates=True dans process_extraction."
@@ -404,7 +415,7 @@ def process_trend(
     if verbose:
         n_st = dataEX[id_col].nunique()
         _ids = dataEX[id_col].unique()
-        _preview = ", ".join(str(s) for s in _ids[:3])
+        _preview = ", ".join(str(s).replace(_ID_SEP, "_") for s in _ids[:3])
         if n_st > 3:
             _preview += f", … (+{n_st - 3})"
         _d0 = dataEX[date_col].min().date()
@@ -546,8 +557,9 @@ def process_trend(
 
     # Restore original ID column name(s)
     if len(original_id_cols) > 1:
-        # Split united ID back into original columns
-        split = result[id_col].str.split("_", n=len(original_id_cols) - 1, expand=True)
+        # Split united ID back into original columns — the control-char
+        # separator makes this lossless even if IDs contain "_"
+        split = result[id_col].str.split(_ID_SEP, expand=True)
         loc = result.columns.get_loc(id_col)
         for i, col_name in enumerate(original_id_cols):
             result.insert(loc + i, col_name, split[i])
@@ -556,6 +568,12 @@ def process_trend(
         result = result.rename(columns={id_col: original_id_cols[0]})
     elif len(original_id_cols) == 0:
         pass   # synthetic "ID" stays as-is
+
+    # Nullable boolean H: with too few valid values the MK test yields
+    # None — without this the column would silently become object dtype
+    # and boolean filtering (trendEX[trendEX.H]) would break
+    if "H" in result.columns:
+        result["H"] = pd.array(result["H"], dtype="boolean")
 
     if verbose:
         n_sig = int(result["H"].fillna(False).sum())

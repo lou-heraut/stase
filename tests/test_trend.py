@@ -130,6 +130,27 @@ def test_series_with_too_few_values_gives_na():
     assert pd.isna(t.loc["COURT", "p"])
 
 
+def test_h_is_nullable_boolean():
+    data = pd.concat([
+        _yearly(n=30, ids=("LONG",)),
+        _yearly(n=2, ids=("COURT",)),
+    ], ignore_index=True)
+    t = process_trend(data, verbose=False)
+    assert t.H.dtype == "boolean"
+    # le filtrage booléen fonctionne malgré le NA
+    assert set(t[t.H == True].ID) == {"LONG"}          # noqa: E712
+
+
+def test_multiple_id_columns_with_underscore_roundtrip():
+    # les identifiants contenant '_' doivent ressortir intacts
+    data = _yearly(n=30, ids=("S_1", "S_2"))
+    data["model"] = "M_a"
+    t = process_trend(data, verbose=False)
+    assert set(t.ID) == {"S_1", "S_2"}
+    assert set(t.model) == {"M_a"}
+    assert list(t.columns[:2]) == ["ID", "model"]
+
+
 def test_period_trend_outside_data_returns_empty():
     with pytest.warns(UserWarning):
         t = process_trend(_yearly(), period_trend=["2050-01-01", "2060-12-31"],
