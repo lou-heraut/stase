@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from exstat import Adaptive, process_extraction
-from exstat.extraction import _SPARSE_ATTR
+from stase import Adaptive, process_extraction
+from stase.extraction import _SPARSE_ATTR
 
 
 def daily(start="2000-01-01", end="2004-12-31", seed=1, ids=("S1",)):

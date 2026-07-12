@@ -4,13 +4,13 @@
 # *1 INRAE, UR RiverLy, Villeurbanne, France
 # *2 INRAE, RECOVER, Aix-Marseille Université, Aix-en-Provence, France
 #
-# This file is part of the exstat Python package (Python port of the
+# This file is part of the stase Python package (Python port of the
 # EXstat R package).
 #
-# exstat is free software: you can redistribute it and/or modify it
+# stase is free software: you can redistribute it and/or modify it
 # under the terms of the license in the LICENSE file of this repository.
 #
-# exstat is distributed in the hope that it will be useful, but WITHOUT
+# stase is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.
 

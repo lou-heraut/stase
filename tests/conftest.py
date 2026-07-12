@@ -1,4 +1,4 @@
-"""Rend exstat importable sans installation (usage développeur)."""
+"""Rend stase importable sans installation (usage développeur)."""
 
 import sys
 from pathlib import Path

@@ -1,12 +1,17 @@
-# exstat
+# stase
 
-Port Python du package R **EXstat** : extraction et analyse de tendance de
-variables hydroclimatiques à partir de séries temporelles journalières.
+**STASE** — *STatistical Aggregation & Stationarity Evaluation*.
+
+Port Python du package R **EXstat** : extraction et agrégation de
+variables hydroclimatiques à partir de séries temporelles journalières,
+et analyse de leur (non-)stationnarité — Mann-Kendall généralisé et
+pente de Sen. La stase, c'est ce que l'on cherche dans les chroniques ;
+les données climatiques et hydrologiques disent souvent autre chose.
 
 ```python
 import numpy as np
 import pandas as pd
-from exstat import process_extraction, Adaptive, process_trend
+from stase import process_extraction, Adaptive, process_trend
 
 data = pd.DataFrame({"date": ..., "Q": ..., "id": ...})   # date en datetime64
 
@@ -45,7 +50,7 @@ qna = process_extraction(data, funct={"QNA": (np.nanmin, "Q")},
 Sans installation : ajouter `src/` au PYTHONPATH. Sinon
 `pip install -e .` (environnement virtuel).
 
-Le package `card` (CARD_project/card) utilise exstat comme moteur pour
+Le package `card` (CARD_project/card) utilise stase comme moteur pour
 exécuter les fiches CARD YAML.
 
 ## Origine

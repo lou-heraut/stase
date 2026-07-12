@@ -5,13 +5,13 @@
 # *1 INRAE, UR RiverLy, Villeurbanne, France
 # *2 INRAE, RECOVER, Aix-Marseille Université, Aix-en-Provence, France
 #
-# This file is part of the exstat Python package (Python port of the
+# This file is part of the stase Python package (Python port of the
 # EXstat R package).
 #
-# exstat is free software: you can redistribute it and/or modify it
+# stase is free software: you can redistribute it and/or modify it
 # under the terms of the license in the LICENSE file of this repository.
 #
-# exstat is distributed in the hope that it will be useful, but WITHOUT
+# stase is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.
 
@@ -66,7 +66,7 @@ class Adaptive:
 # afin que NApct mesure la complétude réelle (en R, ces NaN de construction
 # sont invisibles au comptage via is.na_not_nan — distinction NA/NaN
 # impossible en pandas).
-_SPARSE_ATTR = "exstat_sparse"
+_SPARSE_ATTR = "stase_sparse"
 
 # Alias Cython pandas pour les fonctions d'agrégation courantes.
 # Quand funct est dans ce dict et qu'il n'y a pas de kwargs, on passe une
