@@ -248,6 +248,38 @@ def test_empty_extraction_chains_into_trend():
     assert "H" in t.columns
 
 
+# ── argmax positionnel Cython : équivalence avec np.nanargmax générique ─────
+
+@pytest.mark.parametrize("skipna", [False, True])
+def test_positional_agg_matches_generic_nanargmax(skipna):
+    # NaN épars, ex-æquo, années entièrement NaN, fenêtre hydrologique
+    data = daily(ids=("S1", "S2"), end="2006-12-31")
+    rng = np.random.default_rng(7)
+    data.loc[rng.random(len(data)) < 0.15, "Q"] = np.nan
+    data.loc[(data.id == "S2") & (data.date.dt.year == 2003), "Q"] = np.nan
+    data.loc[data.date.dt.month == 6, "Q"] = 42.0        # ex-æquo massifs
+
+    kw = {"skipna": True} if skipna else {}
+    fast = process_extraction(
+        data, funct={"t": (np.nanargmax, "Q", kw)},
+        time_step="year", sampling_period="09-01")
+    generic = process_extraction(
+        data, funct={"t": (lambda x: np.nanargmax(x), "Q", kw)},
+        time_step="year", sampling_period="09-01")
+    pd.testing.assert_frame_equal(fast, generic)
+
+
+def test_positional_agg_is_date_pipeline():
+    data = daily(ids=("S1",))
+    fast = process_extraction(data, funct={"tQJXA": (np.nanargmax, "Q", True)},
+                              time_step="year", sampling_period="09-01")
+    generic = process_extraction(
+        data, funct={"tQJXA": (lambda x: np.nanargmax(x), "Q", True)},
+        time_step="year", sampling_period="09-01")
+    pd.testing.assert_frame_equal(fast, generic)
+    assert fast.tQJXA.dtype == "Int64"
+
+
 # ── validations d'entrée ────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("bad", ["9-1x", "13-01", "09-32", "0901", 901])

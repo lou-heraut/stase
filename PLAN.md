@@ -187,8 +187,47 @@ sensible sur les fiches CARD multi-variables sur 5M lignes.
 
 ### 4.2 Micro-optimisations (opportunistes, si mesurées utiles)
 > ✅ **Fait (2026-07-12)** — dup_check trend vectorisé, cache Date
-> year-season. benchmark_real.py (EXstat_Claude) non rejoué : à faire à
-> l'occasion sur les données RRSE.
+> year-season.
+
+### 4.3 Passe de profilage sur données réelles (fait, 2026-07-12)
+> ✅ Benchmark RRSE rejoué (228 séries, 5,16M lignes journalières —
+> `benchmarks/bench_rrse.py`) puis profilage cProfile des chemins chauds.
+> Trois optimisations sûres appliquées, validées par les 83 tests stase,
+> les 40 tests card et le corpus card régénéré **identique octet à
+> octet** à la référence (525 ok) :
+>
+> 1. **Tri d'abord, doublons par adjacence** — le contrôle des dates
+>    dupliquées (hachage de 5M lignes, ~31 % du temps de QA) devient une
+>    comparaison de voisins vectorielle après le tri (déjà requis).
+>    Sémantique identique (tri stable → « première occurrence » inchangé).
+> 2. **Fan-out `keep='all'` par alignement d'index** — la sortie
+>    transform de time_step 'none' préserve l'index des lignes d'entrée ;
+>    l'assignation remplace un merge 5M×5M (VCN10 : −61 %). Repli merge
+>    conservé pour les cas non alignés (ragged, multi-funct).
+> 3. **Argmax positionnel Cython** — `np.nanargmax`/`np.nanargmin` mappés
+>    sur `cumcount` + `idxmax`/`idxmin` (zéro appel Python par groupe),
+>    équivalence exacte vérifiée par test dédié (NaN, ex-æquo, groupes
+>    vides, skipna). `np.argmax` PAS mappé (sémantique NaN différente).
+>
+> Résultats (total extraction+trend, hors chargement) : **24,9s → 14,9s
+> (−40 %)**. QA −32 %, QJXA −34 %, tQJXA −28 %, QMNA −26 %, VCN10 −63 %,
+> 4 variables −32 %.
+>
+> **Pistes écartées (retour honnête)** :
+> - extraction numpy des champs de date : plus lente que `.dt` de
+>   pandas 3 (mesuré) ;
+> - l'agrégation elle-même est au plancher Cython de pandas (~0,4s/appel
+>   sur 5M lignes) — le reste du coût (conversion categorical ~0,4s au
+>   premier appel, tri ~0,5s, année hydrologique ~0,5s) est proche de
+>   l'incompressible sans changement d'architecture ;
+> - réécriture Polars/DuckDB : gain potentiel 5-20× sur les groupby mais
+>   réécriture complète du moteur → invaliderait la validation R et le
+>   corpus card ; à considérer seulement si un vrai besoin de volume
+>   apparaît (>100M lignes), pas pour consolider ;
+> - numba : dépendance lourde + warmup JIT pour ~2× au mieux ;
+> - parallélisation par séries : le coût de copie inter-processus domine.
+> - Le chargement des CSVs (3,7s) est côté utilisateur, pas stase
+>   (piste : `pd.read_csv(engine="pyarrow")`).
 - trend.py:299 `groupby().apply(lambda s: s.duplicated().any())` →
   `dataEX.duplicated([id_col, date_col]).any()` (vectorisé).
 - `_extract_year_season` : caches Date par clé unique comme dans

@@ -70,6 +70,11 @@ class Adaptive:
 # impossible en pandas).
 _SPARSE_ATTR = "stase_sparse"
 
+# Clé DataFrame.attrs interne : sortie 'transform' de time_step 'none'
+# dont l'index correspond aux positions des lignes d'entrée — autorise le
+# fan-out keep='all' par simple alignement d'index au lieu d'un merge.
+_ALIGNED_ATTR = "stase_row_aligned"
+
 # Alias Cython pandas pour les fonctions d'agrégation courantes.
 # Quand funct est dans ce dict et qu'il n'y a pas de kwargs, on passe une
 # chaîne à .agg() → chemin Cython (zéro appel Python par groupe).
@@ -415,6 +420,47 @@ def _window_nmonths(sp_start: str, sp_end: str, dt2add: int) -> int:
     return count
 
 
+# Argmax/argmin positionnels par groupe en Cython pur.
+# np.nanargmax(groupe) = position 0-based du max en ignorant les NaN —
+# reproductible avec idxmax (label du max, skipna, premier ex-æquo comme
+# numpy) + cumcount (position dans le groupe). np.argmax/np.argmin ne sont
+# PAS mappés : leur sémantique NaN diffère (argmax voit NaN comme max).
+_POSITIONAL_AGGS: dict = {
+    np.nanargmax: "idxmax",
+    np.nanargmin: "idxmin",
+}
+
+
+def _positional_agg(data, g, grp_keys, primary_col, method, skip_na, out_index):
+    """Position 0-based de l'extremum par groupe, sans appel Python par
+    groupe : cumcount + idxmax/idxmin (Cython). Équivalent exact de
+    .agg(np.nanargmax) / .agg(np.nanargmin) — vérifié par test dédié."""
+    if skip_na:
+        frame = data.loc[data[primary_col].notna()]
+        gg = frame.groupby(grp_keys, sort=True, observed=True)
+    else:
+        frame = data
+        gg = g
+    # position de chaque ligne dans son groupe (ordre des lignes = ordre
+    # que recevrait np.nanargmax)
+    pos_in_group = gg.cumcount().to_numpy()
+    # idxmax lève sur les groupes tout-NaN → on les écarte (résultat NaN)
+    valid_rows = gg[primary_col].transform("count").to_numpy() > 0
+    sub = frame.loc[valid_rows]
+    labels = getattr(
+        sub.groupby(grp_keys, sort=True, observed=True)[primary_col], method
+    )()
+    # label (RangeIndex → position globale) → position dans le groupe
+    pos_map = pd.Series(pos_in_group, index=frame.index)
+    values = pos_map.reindex(labels.to_numpy()).astype("float64")
+    values.index = labels.index
+    values = values.reindex(out_index).rename("_value")
+    if not values.isna().any():
+        # même dtype que .agg(np.nanargmax) quand aucun groupe n'est vide
+        values = values.astype("int64")
+    return values
+
+
 # ---------------------------------------------------------------------------
 # Noyau d'agrégation vectorisé
 # ---------------------------------------------------------------------------
@@ -451,6 +497,13 @@ def _groupby_agg(
 
     if is_single:
         # Chemin optimisé mono-colonne : Cython si disponible, zéro appel Python par groupe
+        if (not funct_kwargs and funct in _POSITIONAL_AGGS
+                and data.index.is_unique):
+            values = _positional_agg(data, g, grp_keys, primary_col,
+                                     _POSITIONAL_AGGS[funct], skip_na,
+                                     n_present.index)
+            return pd.concat([n_present, n_na, values], axis=1).reset_index()
+
         if not funct_kwargs and funct in _PANDAS_AGG_ALIASES:
             agg_fn = _PANDAS_AGG_ALIASES[funct]
         elif funct_kwargs:
@@ -1083,20 +1136,36 @@ def process_extraction(
         data["_id"] = "time serie"
         id_col = "_id"
 
-    # Convertir la colonne ID en Categorical si nécessaire — accélère groupby + duplicated
+    # Convertir la colonne ID en Categorical si nécessaire — accélère groupby + tri
     if not isinstance(data[id_col].dtype, pd.CategoricalDtype):
         data[id_col] = data[id_col].astype("category")
 
-    # --- Dates dupliquées ---
+    # Tri (id, date) dès maintenant : requis par l'extraction de toute
+    # façon (les filtres en aval préservent l'ordre), et il rend le
+    # contrôle des doublons vectoriel — comparaison de voisins au lieu
+    # d'un hachage complet du tableau (~2× moins cher au total).
+    # Le tri multi-clés pandas est stable : « première occurrence » garde
+    # le même sens qu'avant pour rm_duplicates.
+    data = (data.sort_values([id_col] + ([date_col] if date_col else []))
+            .reset_index(drop=True))
+
+    # --- Dates dupliquées (données triées : doublons adjacents) ---
     if date_col is not None:
-        dup_mask = data.duplicated(subset=[id_col, date_col], keep=False)
-        if dup_mask.any():
+        _ids_c = data[id_col].cat.codes.to_numpy()
+        _dts_i = data[date_col].to_numpy().view("i8")
+        _same = (_ids_c[1:] == _ids_c[:-1]) & (_dts_i[1:] == _dts_i[:-1])
+        if _same.any():
+            # True = doublon de la ligne précédente
+            dup_prev = np.concatenate([[False], _same])
             if rm_duplicates:
-                data = data.drop_duplicates(subset=[id_col, date_col], keep="first")
+                data = data[~dup_prev]
             else:
-                n_dup = int(dup_mask.sum())
+                # dup_any = toutes les lignes impliquées (y c. la première
+                # de chaque groupe), comme duplicated(keep=False)
+                dup_any = dup_prev | np.concatenate([_same, [False]])
+                n_dup = int(dup_any.sum())
                 sample = (
-                    data[dup_mask]
+                    data[dup_any]
                     .groupby([id_col, date_col], sort=False, observed=True)
                     .size()
                     .reset_index(name="n")
@@ -1187,7 +1256,8 @@ def process_extraction(
                 [n for (n, *_) in funct_list], rmNApct,
             )
 
-    data = data.sort_values([id_col] + ([date_col] if date_col else [])).reset_index(drop=True)
+    # (données déjà triées en amont ; period/NAyear préservent l'ordre)
+    data = data.reset_index(drop=True)
 
     # Détection de la résolution temporelle de l'entrée pour adapter NApct
     resolution = _detect_resolution(data, date_col, id_col) if date_col else "day"
@@ -1361,6 +1431,11 @@ def process_extraction(
         result = _apply_expand(result, time_step, id_col, var_names, compress)
 
     if isinstance(result, pd.DataFrame):
+        # marqueur interne + index de travail : ne pas exposer
+        result.attrs.pop(_ALIGNED_ATTR, None)
+        if not result.index.equals(pd.RangeIndex(len(result))):
+            result = result.reset_index(drop=True)
+
         # rang interne des sorties ragged : purement technique
         if "_rank" in result.columns:
             result = result.drop(columns=["_rank"])
@@ -1468,7 +1543,14 @@ def _apply_keep_all(data_for_keep, data_with_keys, result, time_step, id_col,
 
     if time_step == "none":
         if date_col is not None and date_col in result.columns:
-            # sortie transform (une valeur par ligne) : jointure alignée
+            if result.attrs.get(_ALIGNED_ATTR) and result.index.is_unique:
+                # sortie transform à index préservé : assignation alignée
+                # sur l'index (O(N)), pas de merge 5M×5M
+                base = data_for_keep.copy()
+                for col in agg_cols:
+                    base[col] = result[col]
+                return base
+            # repli : jointure alignée sur (id, date)
             base = data_for_keep.merge(
                 result[[id_col, date_col] + agg_cols],
                 on=[id_col, date_col],
@@ -1476,12 +1558,12 @@ def _apply_keep_all(data_for_keep, data_with_keys, result, time_step, id_col,
             )
         else:
             # sortie scalaire : toutes les lignes de chaque ID reçoivent
-            # la valeur agrégée
-            base = data_for_keep.merge(
-                result[[id_col] + agg_cols],
-                on=id_col,
-                how="left",
-            )
+            # la valeur agrégée — map (clés uniques) plutôt que merge
+            base = data_for_keep.copy()
+            for col in agg_cols:
+                mapping = pd.Series(result[col].to_numpy(),
+                                    index=result[id_col].to_numpy())
+                base[col] = base[id_col].map(mapping)
         return base
 
     # Calcul de la date représentative du groupe pour chaque ligne
@@ -1914,6 +1996,7 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
                 "(transform/ragged) en time_step 'none'."
             )
         parts = []
+        all_aligned = True
         for gid, sub, v in vec_results:
             if v is None:
                 continue    # série vide ou toute-NaN : absente de la sortie
@@ -1924,16 +2007,23 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
                 else:
                     cols_dict["_rank"] = np.arange(len(v))
                 cols_dict[nameEX] = v
+                # index d'origine préservé : permet le fan-out keep='all'
+                # par alignement d'index (pas de merge 5M×5M)
+                parts.append(pd.DataFrame(cols_dict, index=sub.index))
             else:
+                all_aligned = False
                 cols_dict = {id_col: gid,
                              "_rank": np.arange(len(v)),
                              nameEX: v}
-            parts.append(pd.DataFrame(cols_dict))
+                parts.append(pd.DataFrame(cols_dict))
         if not parts:
             # toutes les séries vides ou toutes-NaN : vide typé
             return pd.DataFrame({id_col: pd.Series(dtype=object),
                                  nameEX: pd.Series(dtype="float64")})
-        return pd.concat(parts, ignore_index=True)
+        out = pd.concat(parts, ignore_index=not all_aligned)
+        if all_aligned:
+            out.attrs[_ALIGNED_ATTR] = True
+        return out
 
     ext = pd.DataFrame(rows_scalar,
                        columns=[id_col, "_nPresent", "_nNA", "_value"])
