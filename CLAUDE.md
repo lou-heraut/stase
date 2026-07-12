@@ -37,10 +37,14 @@ docs/img/         # figures du README (déposées manuellement)
 
 ## Règles du projet (décisions utilisateur, 2026-07-12)
 
-1. **`tools.py` est gelé.** Port validé contre R (73/73). Pas de refactor,
-   pas de seed RNG, pas d'optimisation mémoire. Seules interactions
-   permises : tests goldens et documentation des limites. Exception :
-   une vraie divergence de résultat avec R se corrige (aucune connue).
+1. **`tools.py` est gelé.** Port validé contre R (73/73). Aucune
+   modification sans accord explicite de l'utilisateur. Deux exceptions
+   ont été validées et faites le 2026-07-12 : rng/seed LTP
+   (reproductibilité des ex-æquo) et variance LTP par blocs (mémoire
+   bornée) — prouvées par tests d'équivalence, cf. docs/dev/PLAN.md
+   phase 3. Interactions toujours permises : tests goldens,
+   documentation des limites, correction d'une vraie divergence de
+   résultat avec R (aucune connue).
 2. **Détection des colonnes par type, jamais par nom.** datetime → date,
    texte → identifiant de série, numérique → valeurs. Ne jamais proposer
    de paramètre `id_col=`/`date_col=`. Les problèmes de détection se
