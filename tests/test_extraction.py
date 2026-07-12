@@ -208,6 +208,26 @@ def test_no_ghost_series_after_period_filter(time_step):
     assert set(r[r.columns[0]].unique()) == {"S1"}
 
 
+# ── validations d'entrée ────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("bad", ["9-1x", "13-01", "09-32", "0901", 901])
+def test_invalid_sampling_period_raises(bad):
+    data = daily()
+    with pytest.raises(ValueError, match="sampling_period invalide"):
+        process_extraction(data, funct={"QA": (np.nanmean, "Q")},
+                           time_step="year", sampling_period=bad)
+
+
+def test_adaptive_fallback_warns():
+    data = daily(ids=("S1", "S2"))
+    data.loc[data.id == "S2", "Q"] = np.nan     # S2 toute-NaN → repli
+    with pytest.warns(UserWarning, match="repli sur le mois par défaut"):
+        r = process_extraction(data, funct={"QNA": (np.nanmin, "Q")},
+                               time_step="year",
+                               sampling_period=Adaptive(np.nanmax, "Q"))
+    assert set(r.id.unique()) == {"S1", "S2"}
+
+
 # ── NAyear_lim ──────────────────────────────────────────────────────────────
 
 def test_nayear_lim_truncates():

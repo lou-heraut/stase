@@ -137,6 +137,33 @@ def _parse_mmdd(s: str) -> tuple[int, int]:
     return int(parts[0]), int(parts[1])
 
 
+def _validate_mmdd(s) -> str:
+    """Valide un élément de sampling_period au format 'MM-DD'.
+
+    Sans cette validation, un format invalide finirait en erreur pandas
+    obscure au fond de l'attribution des années hydrologiques.
+    """
+    msg = (
+        f"sampling_period invalide : {s!r}. Format attendu 'MM-DD' "
+        "(ex. '09-01'), ou [début, fin], ou un objet Adaptive."
+    )
+    if not isinstance(s, str):
+        raise ValueError(msg)
+    parts = s.split("-")
+    if len(parts) != 2:
+        raise ValueError(msg)
+    try:
+        m, d = int(parts[0]), int(parts[1])
+    except ValueError:
+        raise ValueError(msg) from None
+    if not (1 <= m <= 12 and 1 <= d <= 31):
+        raise ValueError(
+            f"sampling_period invalide : {s!r} — mois hors [01, 12] "
+            "ou jour hors [01, 31]."
+        )
+    return s
+
+
 def _resolve_sampling_period(
     sampling_period: str | list | None, ref_year: int = 1972,
 ) -> tuple[str, str]:
@@ -144,7 +171,7 @@ def _resolve_sampling_period(
     if sampling_period is None:
         return "01-01", "12-31"
     if isinstance(sampling_period, str):
-        sp = sampling_period
+        sp = _validate_mmdd(sampling_period)
         start_date = pd.Timestamp(year=ref_year, month=int(sp[:2]), day=int(sp[3:]))
         end_date = start_date - timedelta(days=1)
         return sp, end_date.strftime("%m-%d")
@@ -157,12 +184,12 @@ def _resolve_sampling_period(
         if sp0_missing and sp1_missing:
             return "01-01", "12-31"
         if sp0_missing:
-            end_d = pd.Timestamp(f"{ref_year}-{sp1}")
+            end_d = pd.Timestamp(f"{ref_year}-{_validate_mmdd(sp1)}")
             return (end_d + timedelta(days=1)).strftime("%m-%d"), sp1
         if sp1_missing:
-            start_d = pd.Timestamp(f"{ref_year}-{sp0}")
+            start_d = pd.Timestamp(f"{ref_year}-{_validate_mmdd(sp0)}")
             return sp0, (start_d - timedelta(days=1)).strftime("%m-%d")
-        return str(sp0), str(sp1)
+        return _validate_mmdd(str(sp0)), _validate_mmdd(str(sp1))
     raise ValueError(f"sampling_period invalide : {sampling_period!r}")
 
 
@@ -599,6 +626,7 @@ def _resolve_column_references(
     funct_list: list[tuple],
     data: pd.DataFrame,
     date_col: str | None,
+    verbose: bool = False,
 ) -> list[tuple]:
     """Résolution des références de colonnes, comme les funct_args du R :
 
@@ -638,6 +666,10 @@ def _resolve_column_references(
             static_kwargs[k] = v
 
         if ref_names:
+            if verbose:
+                for k, c in zip(ref_names, ref_cols):
+                    print(f"  '{name}' : kwarg {k}='{c}' interprété comme "
+                          f"référence à la colonne '{c}' (alignée sur le groupe)")
             n_base = len(cols)
 
             def wrapped(*args, _fn=fn, _n=n_base, _refs=tuple(ref_names),
@@ -802,6 +834,14 @@ def process_extraction(
     ----------
     data         : DataFrame avec colonne datetime, colonne str (id), colonne(s) numérique(s).
     funct        : Callable ou dict {name: callable | tuple} pour plusieurs variables.
+                   Tuple : (fn, *colonnes_ou_littéraux, kwargs?, is_date?).
+                   Attention à l'ambiguïté bool : un bool en DERNIÈRE position
+                   est toujours is_date — (fn, "Q", True) signifie is_date=True ;
+                   pour passer un littéral booléen positionnel à fn, ajoutez le
+                   dict kwargs après : (fn, "Q", True, {}) → fn(Q, True).
+                   Un kwarg str égal à un nom de colonne des données devient une
+                   référence : la colonne, alignée sur le groupe, est passée à fn
+                   (ex. {"lim": "upLim"}) ; visible avec verbose=True.
     funct_args   : DÉPRÉCIÉ — intégrer colonnes et kwargs dans funct via tuple.
     time_step    : 'year' | 'year-month' | 'month' | 'year-season' | 'season' | 'yearday' | 'none'.
     sampling_period : fenêtre 'MM-DD' ou ['MM-DD','MM-DD'], utilisée pour time_step='year'.
@@ -1075,7 +1115,8 @@ def process_extraction(
         funct_list = expanded
 
     # Résolution des références de colonnes (kwargs-colonnes, alias date)
-    funct_list = _resolve_column_references(funct_list, data, date_col)
+    funct_list = _resolve_column_references(funct_list, data, date_col,
+                                            verbose=verbose)
 
     # Compaction des colonnes creuses issues d'un fan-out keep='all' d'un
     # appel précédent (cf. _SPARSE_ATTR) — uniquement si toutes les
@@ -1904,27 +1945,49 @@ def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
             f"Colonnes disponibles : {list(data.columns)}"
         )
 
-    def _start_month(g: pd.DataFrame) -> str:
+    fallback_ids: list = []
+
+    def _start_month(g: pd.DataFrame, gid=None) -> str:
         monthly = g.groupby(g[date_col].dt.month)[spec.col].mean().dropna()
         if len(monthly) == 0:
+            fallback_ids.append(gid)
             return spec.default
         target = spec.funct(monthly.to_numpy())
         matches = monthly.index[monthly == target]
         if len(matches) == 0:
+            # funct n'a pas retourné une des moyennes mensuelles
+            # (ex. np.nanmean) : impossible d'en déduire un mois
+            fallback_ids.append(gid)
             return spec.default
         return f"{int(matches[0]):02d}-01"
+
+    def _warn_fallbacks():
+        if fallback_ids:
+            _preview = ", ".join(str(i) for i in fallback_ids[:5])
+            if len(fallback_ids) > 5:
+                _preview += f", … (+{len(fallback_ids) - 5})"
+            warnings.warn(
+                f"sampling_period adaptatif : repli sur le mois par défaut "
+                f"'{spec.default}' pour {len(fallback_ids)} série(s) "
+                f"({_preview}) — série vide, toute-NaN, ou funct ne "
+                "retournant pas une des moyennes mensuelles "
+                "(utilisez p. ex. np.nanmax / np.nanmin).",
+                UserWarning, stacklevel=3,
+            )
 
     sparse_in = list(data.attrs.get(_SPARSE_ATTR, []))
 
     if id_col is None:
         sp = _start_month(data)
+        _warn_fallbacks()
         return process_extraction(data, sampling_period=sp, **kwargs)
 
     groups: dict[str, list] = {}
     for gid, g in data.groupby(id_col, observed=True, sort=False):
         if len(g) == 0:
             continue
-        groups.setdefault(_start_month(g), []).append(gid)
+        groups.setdefault(_start_month(g, gid), []).append(gid)
+    _warn_fallbacks()
 
     parts, out_sparse = [], set()
     for sp, ids in groups.items():
