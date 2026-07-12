@@ -5,8 +5,9 @@
 Port Python du package R **EXstat** : extraction et agrégation de
 variables hydroclimatiques à partir de séries temporelles journalières,
 et analyse de leur (non-)stationnarité — Mann-Kendall généralisé et
-pente de Sen. La stase, c'est ce que l'on cherche dans les chroniques ;
-les données climatiques et hydrologiques disent souvent autre chose.
+pente de Sen. La stase est l'état d'une série sans tendance :
+l'hypothèse nulle du test de Mann-Kendall. stase agrège les chroniques
+et mesure ce qui s'en écarte.
 
 ```python
 import numpy as np
