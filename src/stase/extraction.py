@@ -42,6 +42,8 @@ from typing import Callable
 import numpy as np
 import pandas as pd
 
+from ._display import _verbose_box
+
 
 @dataclass(frozen=True)
 class Adaptive:
@@ -787,19 +789,6 @@ def _apply_expand(
         var_cols = [c for c in result.columns if c == name or c.startswith(name + "_")]
         out[name] = result[struct_cols + var_cols].copy()
     return out
-
-
-# ---------------------------------------------------------------------------
-# Verbose output
-# ---------------------------------------------------------------------------
-
-def _verbose_box(title: str, rows: list[str], width: int = 66) -> None:
-    inner = width - 2
-    bar = "─" * max(0, inner - len(title) - 3)
-    print(f"┌─ {title} {bar}┐")
-    for r in rows:
-        print("│  " + r.ljust(inner - 2) + "│")
-    print("└" + "─" * inner + "┘")
 
 
 # ---------------------------------------------------------------------------

@@ -30,6 +30,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from ._display import _verbose_box
 from .tools import GeneralMannKendall
 
 # Séparateur interne pour unir plusieurs colonnes identifiantes en une
@@ -37,17 +38,6 @@ from .tools import GeneralMannKendall
 # ne peut pas apparaître dans un identifiant réel, le split retour est
 # donc sans ambiguïté même si les identifiants contiennent '_'.
 _ID_SEP = "\x1f"
-
-
-# ── Verbose helper (same style as process_extraction._verbose_box) ────────────
-
-def _verbose_box(title: str, rows: list, width: int = 66) -> None:
-    inner = width - 2
-    bar = "─" * max(0, inner - len(title) - 3)
-    print(f"┌─ {title} {bar}┐")
-    for r in rows:
-        print("│  " + r.ljust(inner - 2) + "│")
-    print("└" + "─" * inner + "┘")
 
 
 # ── Per-series helpers ───────────────────────────────────────────────────────
@@ -163,7 +153,7 @@ def process_trend(
     period_change=None,
     extreme_prob=0.01,
     show_advance_stat=False,
-    verbose=True,
+    verbose=False,
 ):
     """Run Mann-Kendall + Sen-Theil trend analysis on process_extraction output.
 
