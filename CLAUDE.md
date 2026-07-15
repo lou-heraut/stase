@@ -9,13 +9,20 @@ mensuelles…) puis analyse de stationnarité (Mann-Kendall généralisé,
 pente de Sen). Il sert de **moteur de données** au package `card`
 (`CARD_project/card`), qui exécute les fiches CARD YAML.
 
-Repos liés :
-- `EXstat_project/EXstat/` — code R d'origine (référence, ne pas modifier)
-- `EXstat_project/EXstat_Claude/` — première conversion Python ; contient
-  les scripts de validation croisée R↔Python et les CSVs de référence
-  complets (`EXstat_py/ref_output/`, `ref_trend/`)
-- `CARD_project/card/` — consommateur de stase (sa ROADMAP.md documente
-  la refonte commune) ; `CARD_project/CARD-R/` — R d'origine
+Repos liés (séparation actée le 2026-07-15 : les repos R restent
+« propres, sans IA » — référence de validation uniquement ; tout le
+travail IA se fait dans stase et card) :
+- `EXstat_project/EXstat/` — code R d'origine, en maintenance
+  (ne pas modifier, ne pas y ajouter de fichiers IA)
+- `CARD_project/card/` — consommateur de stase (sa docs/dev/ROADMAP.md
+  documente la refonte commune) ; `CARD_project/CARD-R/` — R d'origine,
+  même statut que EXstat
+- `EXstat_project/EXstat_Claude/` — ancien dossier de travail de la
+  conversion (pas un repo git), désormais archivable : son CLAUDE.md
+  historique est copié dans `docs/dev/CONVERSION_R.md` et le harnais de
+  validation croisée dans `docs/dev/harnais_R/` ; ses CSVs de référence
+  complets (`EXstat_py/ref_output/`, `ref_trend/`) sont régénérables via
+  ces scripts
 
 ## Structure
 
@@ -92,4 +99,5 @@ dépendance déclarée pandas>=2.2 (include_groups, observed=).
 - Divergences R intentionnelles (NApct calendaire réel, bug yearday R
   non reproduit, précision MLE Hurst) : documentées dans le README —
   ne pas « corriger ». Le détail historique complet de la conversion est
-  dans `EXstat_Claude/CLAUDE.md`.
+  dans `docs/dev/CONVERSION_R.md` (archive de l'ancien
+  `EXstat_Claude/CLAUDE.md`).

@@ -11,8 +11,9 @@ et les références de cette validation sont commitées dans `tests/data/`
 - 11 scénarios d'extraction couvrant les 7 time_steps.
 
 L'historique détaillé de la conversion (choix d'implémentation,
-optimisations, phases de validation) est conservé dans le dossier
-`EXstat_Claude/` du projet d'origine.
+optimisations, phases de validation) est conservé dans
+[CONVERSION_R.md](CONVERSION_R.md), et le harnais de validation croisée
+d'origine dans [harnais_R/](harnais_R/).
 
 ## Divergences intentionnelles avec le R
 
