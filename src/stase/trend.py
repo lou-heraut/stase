@@ -22,7 +22,7 @@ Mann-Kendall + Sen-Theil per series and per variable.
 Usage
 -----
 from stase import process_trend
-trendEX = process_trend(dataEX, MK_level=0.1, time_dependency_option="INDE")
+trend = process_trend(data, MK_level=0.1, time_dependency_option="INDE")
 """
 
 import warnings
@@ -213,7 +213,7 @@ def process_trend(
         moyenne). Bool global ou dict par variable.
     meta : DataFrame | None
         Table de métadonnées avec colonnes {'variable_en', 'relative'}
-        (metaEX de card), prioritaire sur `relative`.
+        (table meta de card.extract), prioritaire sur `relative`.
     extremes_include_non_significant : bool
         Si False, seules les séries significatives (H=True) contribuent
         aux bornes de quantiles de a_relative.
@@ -269,7 +269,7 @@ def process_trend(
     # ── 1. Validate ───────────────────────────────────────────────────────────
     if not isinstance(dataEX, pd.DataFrame):
         raise TypeError(
-            f"dataEX doit être un DataFrame pandas, reçu {type(dataEX).__name__}."
+            f"data doit être un DataFrame pandas, reçu {type(dataEX).__name__}."
         )
     if len(dataEX) == 0:
         warnings.warn("dataEX est vide (0 lignes). Retour d'un DataFrame vide.", UserWarning)
