@@ -336,3 +336,14 @@ EXstat_Claude.
 >
 > Reste au push GitHub : renseigner les URLs `<owner>` (READMEs, badge,
 > workflow card), activer les workflows, vérifier la matrice CI.
+
+---
+
+**Clôture (2026-07-16, stase 0.2)** : audit dépassé par la revue
+critique pré-déploiement. Corrections majeures apportées depuis :
+seuil max_na_pct comparé au taux exact, grille temporelle matérialisée
+(lignes absentes = NaN par série, résolution détectée par série avec
+erreur si mixte, keep='all' rendu sur la grille complète,
+réindexation des séries agrégées dans process_trend). Divergences et
+justifications : docs/dev/ORIGINE_R.md ; validation croisée MAKAHO :
+card-api/tests/test_makaho.py.
