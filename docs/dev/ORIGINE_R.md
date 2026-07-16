@@ -22,7 +22,25 @@ Ces écarts sont assumés et ne seront pas « corrigés » :
 - **NApct** utilise le nombre réel de jours calendaires comme dénominateur
   (R : constantes 365.25 / 30.4375) et s'adapte à la résolution de
   l'entrée (journalière, mensuelle, saisonnière).
+- **Le seuil `max_na_pct` se compare au NApct exact**, non arrondi
+  (R comparait la valeur arrondie à 1 décimale : un taux réel de
+  3.04 % passait un seuil de 3). L'arrondi à 1 décimale ne subsiste
+  que dans la colonne `na_pct` de sortie (affichage).
 - Le bug R du NApct des jours 1 et 365 en `yearday` n'est pas reproduit.
+- **Grille temporelle matérialisée** (stase 0.2) : les pas de temps
+  absents de l'entrée (lignes manquantes) sont insérés en NaN par série
+  dans `process_extraction`, et dans les séries agrégées de
+  `process_trend`. R supposait des chroniques denses sans le vérifier :
+  sur des chroniques trouées, les dates d'extremum (`is_date`), les
+  fenêtres glissantes, `max_na_years` et la pente de Sen y étaient
+  silencieusement faux (biais de pente mesuré à +38 % avec 10 années
+  absentes sur 40). Séries à dates irrégulières (hors grille) : laissées
+  telles quelles avec warning.
+- **Résolution homogène requise** : le pas de temps est détecté par
+  série (R et stase 0.1 ne regardaient que la première) et les séries
+  d'une même extraction doivent le partager, erreur explicite sinon
+  (agréger un max journalier et un max mensuel sous le même nom
+  comparerait des grandeurs différentes).
 - **Précision du MLE de Hurst** (LTP) : scipy optimise plus finement que
   l'`optimize` de R (écarts possibles d'environ 2e-3 sur la p-value, le
   verdict H est identique).

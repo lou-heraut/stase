@@ -363,6 +363,38 @@ def process_trend(
             "Utilisez rm_duplicates=True dans process_extraction."
         )
 
+    # ── 3bis. Grille temporelle régulière par série ───────────────────────────
+    # La statistique S de Mann-Kendall ne dépend que de l'ordre des
+    # observations, mais la pente de Sen (indices de lignes = axe
+    # temporel) et les corrections AR1/LTP supposent un pas régulier :
+    # les pas de temps manquants sont insérés en NaN, par série (une
+    # entrée issue de process_extraction est déjà complète, l'opération
+    # est alors sans effet).
+    from .extraction import _complete_grid, _series_resolutions
+    dataEX = dataEX.sort_values([id_col, date_col]).reset_index(drop=True)
+    _res_by_id = _series_resolutions(dataEX, id_col, date_col)
+    dataEX, _n_added, _off_grid = _complete_grid(dataEX, id_col, date_col,
+                                                 _res_by_id)
+    if _off_grid:
+        _preview = ", ".join(str(s).replace(_ID_SEP, "_")
+                             for s in _off_grid[:5])
+        if len(_off_grid) > 5:
+            _preview += f", … (+{len(_off_grid) - 5})"
+        warnings.warn(
+            f"{len(_off_grid)} série(s) à dates hors de leur grille "
+            f"régulière : {_preview}. La pente de Sen y est estimée par "
+            "rang et non par temps réel, et les corrections AR1/LTP y "
+            "sont approximatives.",
+            UserWarning,
+        )
+    if _n_added:
+        warnings.warn(
+            f"{_n_added} pas de temps manquants insérés (valeurs NaN) : "
+            "la pente de Sen et les corrections AR1/LTP supposent une "
+            "grille régulière.",
+            UserWarning,
+        )
+
     # ── 4. Build suffix list ───────────────────────────────────────────────────
     if suffix is not None:
         if isinstance(suffix, str):

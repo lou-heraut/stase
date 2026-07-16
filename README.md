@@ -66,8 +66,13 @@ doivent être convertis en texte : `data["code"].astype(str)`.
   les agrégations (ex. QMNA : moyenne mensuelle puis min annuel).
 - Sorties dynamiques en `time_step="none"` : scalaire, colonne alignée
   (moyenne mobile) ou lignes libres (courbe des débits classés).
-- Filtres de lacunes : `max_na_pct` (taux de lacunes par échantillon) et
-  `max_na_years` (troncature des séries à trous pluriannuels).
+- Filtres de lacunes : `max_na_pct` (taux de lacunes par échantillon,
+  comparé au taux exact) et `max_na_years` (troncature des séries à
+  trous pluriannuels).
+- Chroniques à trous sûres : la grille temporelle de chaque série est
+  matérialisée (pas de temps manquants insérés en NaN), et toutes les
+  séries d'un appel doivent partager le même pas de temps (détection
+  par série, erreur explicite sinon).
 - `stase.trend` : options `INDE` (test standard), `AR1` (correction
   d'autocorrélation) et `LTP` (persistance longue, coefficient de
   Hurst ; prévu pour des séries annuelles, passer `seed=` pour des
@@ -80,7 +85,7 @@ traitement spécial du cas vide.
 
 Pour des variables hydroclimatiques prêtes à l'emploi (étiages, crues,
 saisonnalité...), le package [card](https://github.com/lou-heraut/card)
-fournit 215 fiches paramétrées exécutées par stase.
+fournit 226 fiches paramétrées exécutées par stase.
 
 ## Origine
 
@@ -94,7 +99,7 @@ dans le fichier AUTHORS.
 ## Développement
 
 ```bash
-pip install -e . && pytest      # 97 tests, goldens inclus dans tests/data/
+pip install -e . && pytest      # 106 tests, goldens inclus dans tests/data/
 ```
 
 CI : `.github/workflows/tests.yml` (matrice Python × pandas, ruff).

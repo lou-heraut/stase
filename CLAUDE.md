@@ -35,6 +35,8 @@ src/stase/
 tests/
   test_extraction.py         # comportement du moteur
   test_golden_extraction.py  # 11 goldens R (7 time_steps)
+  test_grid.py               # grille matérialisée : trous de lignes ≡ NaN,
+                             #   résolutions mixtes, Sen sur années absentes
   test_tools.py              # 13 goldens MK R + cas limites figés
   test_trend.py              # 5 goldens process_trend R + cas limites
   data/                      # CSVs de référence R (repo auto-suffisant)
@@ -67,8 +69,10 @@ sec : table dans docs/dev/RENAMING_PY.md ; la colonne de date de sortie
 reprend le nom de la colonne d'entrée). En interne, extraction.py et
 trend.py gardent les noms historiques via un pont en tête de fonction :
 ne pas « nettoyer » ce pont, il isole la logique validée par les
-goldens. Style : pas de préfixe redondant, pas de tirets longs dans la
-prose, références R limitées à une mention (docs/dev/ORIGINE_R.md).
+goldens. Style : pas de préfixe redondant, pas de tiret quadratin (—) dans la
+prose, docs, messages ni réponses (marqueur de texte IA, rebute des
+utilisateurices : reformuler), références R limitées à une mention
+(docs/dev/ORIGINE_R.md).
 
 ## Commandes
 
@@ -96,8 +100,17 @@ dépendance déclarée pandas>=2.2 (include_groups, observed=).
 - `process_trend` unit les colonnes identifiantes multiples avec le
   séparateur `\x1f` (jamais `_` : les IDs peuvent en contenir) et
   restitue les colonnes d'origine en sortie. `H` est un booléen nullable.
-- Divergences R intentionnelles (NApct calendaire réel, bug yearday R
-  non reproduit, précision MLE Hurst) : documentées dans le README —
-  ne pas « corriger ». Le détail historique complet de la conversion est
-  dans `docs/dev/CONVERSION_R.md` (archive de l'ancien
-  `EXstat_Claude/CLAUDE.md`).
+- **Grille temporelle matérialisée** (0.2) : `process_extraction`
+  détecte la résolution PAR SÉRIE (erreur si les séries mélangent des
+  pas différents) puis insère une ligne NaN à chaque pas manquant
+  (`_complete_grid`, partagé avec `process_trend` qui réindexe de même
+  ses séries agrégées : pente de Sen et corrections AR1/LTP supposent
+  un pas régulier). `keep='all'` renvoie la grille complète, pas les
+  lignes d'origine. Séries à dates hors grille : laissées telles
+  quelles avec warning.
+- Divergences R intentionnelles (NApct calendaire réel et seuil
+  max_na_pct comparé au taux exact, grille matérialisée, bug yearday R
+  non reproduit, précision MLE Hurst) : documentées dans
+  docs/dev/ORIGINE_R.md, ne pas « corriger ». Le détail historique
+  complet de la conversion est dans `docs/dev/CONVERSION_R.md`
+  (archive de l'ancien `EXstat_Claude/CLAUDE.md`).

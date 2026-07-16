@@ -27,7 +27,11 @@ Optimisations vs implémentation naïve :
 
 Corrections vs R :
   - Filtrage par date calendaire pure (plus de comptage de jours)
-  - Tolérance aux trous dans les chroniques
+  - Grille temporelle matérialisée : les pas de temps absents de
+    l'entrée sont insérés en NaN par série (R supposait des chroniques
+    denses sans le vérifier)
+  - Résolution détectée par série, erreur si les séries mélangent
+    plusieurs pas de temps
   - NApct : dénominateur = jours calendaires réels (pas 365.25/30.4375)
 """
 
@@ -458,25 +462,88 @@ def _apply_is_date(
     return ext
 
 
-def _detect_resolution(data: pd.DataFrame, date_col: str, id_col: str) -> str:
-    """
-    Détecte la résolution temporelle de l'entrée par l'espacement médian
-    entre dates consécutives dans la première série.
-    Retourne : 'day', 'month', 'season', 'year'.
-    """
-    first_id = data[id_col].iloc[0]
-    dates = (data[data[id_col] == first_id][date_col]
-             .sort_values().drop_duplicates().reset_index(drop=True))
-    if len(dates) < 2:
+def _resolution_bucket(median_days: float) -> str:
+    if median_days <= 1.5:
         return "day"
-    med = float(dates.diff().dropna().dt.days.median())
-    if med <= 1.5:
-        return "day"
-    elif med <= 35:
+    if median_days <= 35:
         return "month"
-    elif med <= 100:
+    if median_days <= 100:
         return "season"
     return "year"
+
+
+def _series_resolutions(data: pd.DataFrame, id_col: str, date_col: str) -> dict:
+    """Résolution temporelle de chaque série (espacement médian entre
+    dates consécutives). Données triées par (série, date), dates uniques
+    par série. Les séries à moins de 2 dates, sans espacement mesurable,
+    sont absentes du dict."""
+    codes, uniques = pd.factorize(np.asarray(data[id_col]))
+    days = data[date_col].to_numpy().astype("datetime64[D]").astype(np.int64)
+    same = codes[1:] == codes[:-1]
+    diffs = np.diff(days)[same]
+    owners = codes[1:][same]
+    med = pd.Series(diffs).groupby(owners).median()
+    return {uniques[c]: _resolution_bucket(float(m)) for c, m in med.items()}
+
+
+def _grid_dates(start: pd.Timestamp, end: pd.Timestamp,
+                resolution: str) -> pd.DatetimeIndex:
+    """Grille temporelle régulière couvrant [start, end], ancrée sur
+    start. Le dernier point peut dépasser end si end n'est pas sur la
+    grille (l'appelant le détecte par comparaison des dates)."""
+    if resolution == "day":
+        return pd.date_range(start, end, freq="D")
+    step = {"month": pd.DateOffset(months=1),
+            "season": pd.DateOffset(months=3)}.get(
+        resolution, pd.DateOffset(years=1))
+    out = [start]
+    while out[-1] < end:
+        out.append(out[-1] + step)
+    return pd.DatetimeIndex(out)
+
+
+def _complete_grid(data: pd.DataFrame, id_col: str, date_col: str,
+                   res_by_id: dict) -> tuple[pd.DataFrame, int, list]:
+    """Matérialise la grille régulière de chaque série : une ligne
+    (valeurs NaN) est insérée à chaque pas de temps manquant entre la
+    première et la dernière date. Données triées par (série, date),
+    dates uniques par série.
+
+    Retourne (df, nombre de lignes insérées, séries hors grille). Une
+    série dont les dates ne tombent pas toutes sur la grille ancrée à sa
+    première date est laissée telle quelle et signalée à l'appelant."""
+    parts = []
+    n_added = 0
+    off_grid: list = []
+    changed = False
+    for gid, g in data.groupby(id_col, observed=True, sort=False):
+        res = res_by_id.get(gid)
+        if res is None or len(g) < 2:
+            parts.append(g)
+            continue
+        dates = g[date_col]
+        grid = _grid_dates(dates.iloc[0], dates.iloc[-1], res)
+        if not dates.isin(grid).all():
+            off_grid.append(gid)
+            parts.append(g)
+            continue
+        if len(grid) == len(g):
+            # toutes les dates sont sur la grille et les comptes sont
+            # égaux : la série est déjà complète
+            parts.append(g)
+            continue
+        g2 = g.set_index(date_col).reindex(grid)
+        g2.index.name = date_col
+        g2 = g2.reset_index()
+        g2[id_col] = gid
+        n_added += len(g2) - len(g)
+        parts.append(g2[list(data.columns)])
+        changed = True
+    if not changed:
+        return data, 0, off_grid
+    out = pd.concat(parts, ignore_index=True)
+    out[id_col] = out[id_col].astype(data[id_col].dtype)
+    return out, n_added, off_grid
 
 
 def _window_nmonths(sp_start: str, sp_end: str, dt2add: int) -> int:
@@ -641,10 +708,21 @@ def _groupby_agg(
 # ---------------------------------------------------------------------------
 
 def _napct_vec(n_present: np.ndarray, n_na: np.ndarray, n_expected: np.ndarray) -> np.ndarray:
-    """Calcule NApct vectoriellement (pas de apply/loop Python)."""
+    """Calcule NApct vectoriellement (pas de apply/loop Python).
+
+    Valeur exacte, non arrondie : le seuil max_na_pct se compare à la
+    valeur exacte (R comparait la valeur arrondie — 3.04 % passait un
+    seuil de 3, divergence assumée, cf. docs/dev/ORIGINE_R.md).
+    L'arrondi à 1 décimale n'existe que dans la colonne de sortie,
+    via _napct_out."""
     n_valid = (n_present - n_na).astype(np.float64)
     ne = n_expected.astype(np.float64)
-    return np.where(ne > 0, np.round(np.maximum(0.0, (1.0 - n_valid / ne) * 100.0), 1), 0.0)
+    return np.where(ne > 0, np.maximum(0.0, (1.0 - n_valid / ne) * 100.0), 0.0)
+
+
+def _napct_out(napct: np.ndarray) -> np.ndarray:
+    """Colonne NApct de sortie : arrondie à 1 décimale (affichage)."""
+    return np.round(napct, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -1320,6 +1398,54 @@ def process_extraction(
         if used_values and used_values <= sparse_in:
             data = data.dropna(subset=sorted(used_values), how="all")
 
+    # --- Résolution temporelle : détectée par série, unique pour toutes ---
+    resolution = "day"
+    if date_col is not None:
+        res_by_id = _series_resolutions(data, id_col, date_col)
+        _found = sorted(set(res_by_id.values()))
+        if len(_found) > 1:
+            _by_res: dict = {}
+            for _sid, _r in res_by_id.items():
+                _by_res.setdefault(_r, []).append(_sid)
+            _detail = " ; ".join(
+                f"{_r} : " + ", ".join(str(s) for s in _ids[:3])
+                + (f", … (+{len(_ids) - 3})" if len(_ids) > 3 else "")
+                for _r, _ids in sorted(_by_res.items()))
+            raise ValueError(
+                "Les séries n'ont pas toutes le même pas de temps "
+                f"({_detail}). Les agréger ensemble comparerait des "
+                "grandeurs statistiquement différentes : scindez l'appel "
+                "par résolution."
+            )
+        if _found:
+            resolution = _found[0]
+
+        # --- Grille régulière matérialisée : pas manquants -> NaN ---
+        # Sans elle, les lignes absentes échapperaient à max_na_years,
+        # décaleraient les positions (is_date, fenêtres glissantes) et
+        # compresseraient l'axe temporel des sorties.
+        data, _n_added, _off_grid = _complete_grid(data, id_col, date_col,
+                                                   res_by_id)
+        if _off_grid:
+            _preview = ", ".join(str(s) for s in _off_grid[:5])
+            if len(_off_grid) > 5:
+                _preview += f", … (+{len(_off_grid) - 5})"
+            warnings.warn(
+                f"{len(_off_grid)} série(s) à dates hors de leur grille "
+                f"{resolution} régulière, laissée(s) telle(s) quelle(s) : "
+                f"{_preview}. Les pas de temps manquants n'y sont pas "
+                "matérialisés.",
+                UserWarning,
+            )
+        if _n_added:
+            warnings.warn(
+                f"Grille {resolution} incomplète : {_n_added} pas de "
+                "temps manquants insérés (valeurs NaN). Les lignes "
+                "absentes comptent comme lacunes (na_pct, max_na_pct, "
+                "max_na_years).",
+                UserWarning,
+            )
+
     # --- NAyear_lim : troncature des séries avec lacunes annuelles consécutives trop longues ---
     if NAyear_lim is not None and date_col is not None:
         data = _apply_nayear_lim(data, id_col, date_col, value_cols, NAyear_lim)
@@ -1345,9 +1471,6 @@ def process_extraction(
 
     # (données déjà triées en amont ; period/NAyear préservent l'ordre)
     data = data.reset_index(drop=True)
-
-    # Détection de la résolution temporelle de l'entrée pour adapter NApct
-    resolution = _detect_resolution(data, date_col, id_col) if date_col else "day"
 
     # Snapshot avant que les _extract_* ajoutent des colonnes internes (_hy, _ym…)
     data_for_keep = data.copy() if keep == "all" else None
@@ -1753,10 +1876,10 @@ def _extract_year(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
             n_expected = np.full(len(hy_arr), max(1, round(nm / 3)), dtype=np.int64)
         else:   # "year"
             n_expected = np.ones(len(hy_arr), dtype=np.int64)
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     mS, dS = _parse_mmdd(sp_start)
     # Cache les Timestamps par année unique (évite ~14k pd.Timestamp() répétés)
@@ -1785,10 +1908,10 @@ def _extract_year_month(data, id_col, date_col, col_name, funct, funct_kwargs, s
         n_expected = np.array([calendar.monthrange(p.year, p.month)[1] for p in ym_arr])
     else:
         n_expected = np.ones(len(ym_arr), dtype=np.int64)
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     ext["Date"] = [pd.Timestamp(year=p.year, month=p.month, day=1) for p in ym_arr]
     ext = ext.rename(columns={"_value": nameEX})
@@ -1825,10 +1948,10 @@ def _extract_month(data, id_col, date_col, col_name, funct, funct_kwargs, skip_n
     else:
         # Non-journalier : une entrée attendue par unité temporelle par année
         n_expected = ny_arr.astype(np.int64)
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     ext["Date"] = [pd.Timestamp(year=int(my), month=int(m), day=1)
                    for my, m in zip(my_arr, m_arr)]
@@ -1887,10 +2010,10 @@ def _extract_year_season(data, id_col, date_col, col_name, funct, funct_kwargs, 
         n_expected = slen_arr.astype(np.int64)
     else:   # "season" ou "year"
         n_expected = np.ones(len(sname_arr), dtype=np.int64)
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     _dcache = {s: pd.Timestamp(year=int(s[:4]), month=int(s[5:]), day=1)
                for s in set(ym_arr_ext)}
@@ -1967,10 +2090,10 @@ def _extract_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_
         n_expected = ny_arr.astype(np.int64)
     else:   # "year"
         n_expected = np.ones(len(sname_arr), dtype=np.int64)
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     ext["Date"] = [pd.Timestamp(year=int(yr), month=int(sm), day=1)
                    for yr, sm in zip(yref_arr, sm_arr)]
@@ -2007,11 +2130,11 @@ def _extract_yearday(data, id_col, date_col, col_name, funct, funct_kwargs, skip
 
     ny_arr = ext["_nYear"].to_numpy().astype(np.float64)
     ny_arr[ny_arr <= 0] = np.nan
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), ny_arr)
-    ext.loc[ext["_nYear"] <= 0, "NApct"] = 0.0
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), ny_arr)
+    _napct[(ext["_nYear"] <= 0).to_numpy()] = 0.0
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     my_arr = ext["_min_year"].to_numpy()
     yd_arr = ext["_yd"].to_numpy()
@@ -2147,10 +2270,10 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
     else:
         n_expected = ext["_nPresent"].to_numpy()
 
-    ext["NApct"] = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
-
+    _napct = _napct_vec(ext["_nPresent"].to_numpy(), ext["_nNA"].to_numpy(), n_expected)
     if NApct_lim is not None:
-        ext.loc[ext["NApct"] > NApct_lim, "_value"] = np.nan
+        ext.loc[_napct > NApct_lim, "_value"] = np.nan
+    ext["NApct"] = _napct_out(_napct)
 
     ext = ext.rename(columns={"_value": nameEX})
     cols = [id_col, nameEX] + ([] if rmNApct else ["NApct"])
