@@ -1,5 +1,6 @@
 """Tests du moteur process_extraction."""
 
+import warnings
 import numpy as np
 import pandas as pd
 import pytest
@@ -341,3 +342,41 @@ def test_nayear_lim_truncates():
     # la portion la plus courte (avant la lacune de 3 ans) est masquée
     assert np.isnan(r[r.date == "2001-01-01"].QA.iloc[0])
     assert not np.isnan(r[r.date == "2008-01-01"].QA.iloc[0])
+
+
+# ── alias d'agrégation Cython : jamais un autre résultat ─────────────────────
+
+def test_agg_aliases_never_change_the_value():
+    """Chaque alias doit donner exactement la valeur de la fonction
+    passée par le chemin générique (sans alias). Ici avec des NaN et
+    un groupe entièrement NaN."""
+    from stase.extraction import _PANDAS_AGG_ALIASES
+
+    dates = pd.date_range("2000-01-01", "2002-12-31", freq="D")
+    rng = np.random.default_rng(5)
+    q = rng.gamma(2.0, 5.0, len(dates))
+    q[10:80] = np.nan
+    q[dates.year == 2001] = np.nan              # année tout-NaN
+    data = pd.DataFrame({"id": "S1", "date": dates, "Q": q})
+
+    for fn in _PANDAS_AGG_ALIASES:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            via_alias = process_extraction(
+                data, func={"X": (fn, "Q")}, time_step="year")
+            generic = process_extraction(
+                data, func={"X": (lambda s, _f=fn: _f(s), "Q")},
+                time_step="year")
+        pd.testing.assert_frame_equal(via_alias, generic,
+                                      obj=f"alias {fn}")
+
+
+def test_nanstd_keeps_numpy_ddof():
+    """np.nanstd est ddof=0 ; l'alias pandas 'std' (ddof=1) le
+    trahirait, il ne doit plus être dans la table."""
+    dates = pd.date_range("2000-01-01", "2000-12-31", freq="D")
+    q = np.arange(len(dates), dtype=float)
+    data = pd.DataFrame({"id": "S1", "date": dates, "Q": q})
+    r = process_extraction(data, func={"S": (np.nanstd, "Q")},
+                           time_step="year")
+    assert r["S"].iloc[0] == pytest.approx(np.nanstd(q))

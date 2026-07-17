@@ -22,6 +22,13 @@ Ces écarts sont assumés et ne seront pas « corrigés » :
 - **NApct** utilise le nombre réel de jours calendaires comme dénominateur
   (R : constantes 365.25 / 30.4375) et s'adapte à la résolution de
   l'entrée (journalière, mensuelle, saisonnière).
+- **Groupe sans valeur valide → NaN, pour toutes les fonctions** (0.3),
+  y compris les sommes : une année entièrement lacunaire est une
+  lacune, pas 0 (R : `sum(na.rm=TRUE)` sur tout-NA vaut 0). Et les
+  alias Cython internes sont restreints aux variantes nan* : aliaser
+  np.median (pas de dispatch pandas), les builtins (ordre-dépendants
+  face aux NaN) ou np.nanstd (ddof=0 vs ddof=1 pandas) changeait la
+  valeur, pas seulement la vitesse (test d'équivalence dédié).
 - **Le seuil `max_na_pct` se compare au NApct exact**, non arrondi
   (R comparait la valeur arrondie à 1 décimale : un taux réel de
   3.04 % passait un seuil de 3). L'arrondi à 1 décimale ne subsiste

@@ -83,28 +83,25 @@ _ALIGNED_ATTR = "stase_row_aligned"
 # Quand funct est dans ce dict et qu'il n'y a pas de kwargs, on passe une
 # chaîne à .agg() → chemin Cython (zéro appel Python par groupe).
 #
-# np.argmax / np.argmin sont intentionnellement absents :
-#   pandas.Series.idxmax() retourne le LABEL d'index, pas la position 0-based.
-#   Il n'existe pas d'alias Cython pour un argmax positionnel en pandas.
+# L'alias ne doit JAMAIS changer le résultat, seulement la vitesse
+# (test dédié d'équivalence alias/chemin générique). Seules les
+# variantes nan* sont aliasées : leur contrat EST le skipna des
+# méthodes pandas. Absents intentionnels :
+# - np.mean, np.median, builtins max/min/sum... : sémantique stricte ou
+#   dépendante de l'ordre face aux NaN, et np.median ne dispatche pas
+#   vers pandas — un alias changerait la valeur sur les groupes à NaN ;
+# - np.nanstd / np.std / np.var : pandas "std"/"var" sont en ddof=1,
+#   numpy en ddof=0 — l'alias changerait la valeur ;
+# - np.argmax / np.argmin : pandas.Series.idxmax() retourne le LABEL
+#   d'index, pas la position 0-based (cf. _POSITIONAL_AGGS).
+# Groupe sans valeur valide → NaN partout (invariant moteur, y compris
+# nansum : une année vide est une lacune, pas 0).
 _PANDAS_AGG_ALIASES: dict = {
-    np.mean:   "mean",
-    np.max:    "max",
-    np.min:    "min",
-    np.sum:    "sum",
-    np.std:    "std",
-    np.median: "median",
-    np.var:    "var",
-    max:       "max",
-    min:       "min",
-    sum:       "sum",
-    # variantes nan* : les agrégations pandas sont skipna par défaut,
-    # valeurs identiques (all-NaN → NaN, sauf sum → 0.0 des deux côtés)
     np.nanmean:   "mean",
     np.nanmax:    "max",
     np.nanmin:    "min",
     np.nansum:    "sum",
     np.nanmedian: "median",
-    np.nanstd:    "std",
 }
 
 # Renommage final des colonnes de sortie : l'interne travaille avec les
@@ -668,8 +665,12 @@ def _groupby_agg(
             )
         else:
             if isinstance(agg_fn, str):
-                # Cython path: pandas handles all-NA groups gracefully (returns NaN)
                 values = g[primary_col].agg(agg_fn).rename("_value")
+                # invariant moteur : groupe sans valeur valide → NaN,
+                # comme le chemin générique (le "sum" pandas rendrait
+                # 0.0 sur un groupe tout-NaN : 0 mm de pluie au lieu
+                # d'une lacune)
+                values[(n_present - n_na) == 0] = np.nan
             else:
                 # Guard against functions (e.g. np.argmax) that raise on all-NA groups
                 def _agg_safe(x, _fn=agg_fn):
