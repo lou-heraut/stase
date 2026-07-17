@@ -380,3 +380,16 @@ def test_nanstd_keeps_numpy_ddof():
     r = process_extraction(data, func={"S": (np.nanstd, "Q")},
                            time_step="year")
     assert r["S"].iloc[0] == pytest.approx(np.nanstd(q))
+
+
+def test_ambiguous_nan_functions_warn():
+    dates = pd.date_range("2000-01-01", "2001-12-31", freq="D")
+    data = pd.DataFrame({"id": "S1", "date": dates,
+                         "Q": np.ones(len(dates))})
+    with pytest.warns(UserWarning, match="nanmean"):
+        process_extraction(data, func={"X": (np.mean, "Q")},
+                           time_step="year")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")          # nan* : aucun warning
+        process_extraction(data, func={"X": (np.nanmean, "Q")},
+                           time_step="year")

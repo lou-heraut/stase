@@ -104,6 +104,38 @@ _PANDAS_AGG_ALIASES: dict = {
     np.nanmedian: "median",
 }
 
+# Fonctions à sémantique NaN ambiguë sur des groupes pandas : np.mean
+# est dispatché vers la méthode pandas (skipna), np.median reste
+# strict, np.argmax voit NaN comme un maximum, les builtins dépendent
+# de l'ordre des données. Le moteur les accepte mais prévient : la
+# variante nan* dit ce qu'elle fait.
+_AMBIGUOUS_NAN_FUNCS: dict = {
+    np.mean: "nanmean", np.median: "nanmedian", np.sum: "nansum",
+    np.max: "nanmax", np.min: "nanmin", np.std: "nanstd",
+    np.var: "nanvar", np.argmax: "nanargmax", np.argmin: "nanargmin",
+    max: "nanmax", min: "nanmin", sum: "nansum",
+}
+
+
+def _warn_ambiguous_funcs(funct):
+    fns = []
+    if callable(funct):
+        fns = [funct]
+    elif isinstance(funct, tuple):
+        fns = [funct[0]]
+    elif isinstance(funct, dict):
+        fns = [v[0] if isinstance(v, tuple) else v for v in funct.values()]
+    hits = {f for f in fns if callable(f) and f in _AMBIGUOUS_NAN_FUNCS}
+    for f in hits:
+        warnings.warn(
+            f"'{getattr(f, '__name__', f)}' a une sémantique NaN ambiguë "
+            "appliquée à des groupes pandas (skipna, stricte ou dépendante "
+            f"de l'ordre selon la fonction et le chemin) : préférez "
+            f"'{_AMBIGUOUS_NAN_FUNCS[f]}' (skipna explicite), ou une "
+            "fonction maison pour une sémantique stricte garantie.",
+            UserWarning, stacklevel=3,
+        )
+
 # Renommage final des colonnes de sortie : l'interne travaille avec les
 # noms historiques (Date, Month, NApct...), la sortie utilisateurice est
 # en snake_case et la colonne de date reprend le nom de la colonne
@@ -1352,6 +1384,8 @@ def process_extraction(
                     "Utilisez drop_duplicates=True pour supprimer automatiquement "
                     "(première occurrence conservée)." + hint
                 )
+
+    _warn_ambiguous_funcs(funct)
 
     # Normalise funct en liste de (name, callable, col_names, kwargs, skip_na, is_date)
     funct_list = _normalize_funct(funct, funct_args, nameEX, is_date_global=is_date)
