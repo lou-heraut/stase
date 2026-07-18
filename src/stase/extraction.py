@@ -481,12 +481,14 @@ def _apply_is_date(
 
     ext = ext.drop(columns=["_rss"])
     # Convert to nullable Int64: integers for non-NA, pd.NA where NaN
-    # (float NaN cannot coexist with int in standard numpy/pandas dtypes)
-    ext["_value"] = (
-        pd.array(
-            np.where(np.isnan(result), None, np.round(result).astype(np.int64)),
-            dtype=pd.Int64Dtype(),
-        )
+    # (float NaN cannot coexist with int in standard numpy/pandas dtypes).
+    # NaN slots are zeroed before the int cast (casting NaN to int64 is
+    # undefined and warns) then masked to pd.NA.
+    nan_mask = np.isnan(result)
+    rounded = np.round(np.where(nan_mask, 0, result)).astype(np.int64)
+    ext["_value"] = pd.array(
+        np.where(nan_mask, None, rounded),
+        dtype=pd.Int64Dtype(),
     )
     return ext
 
