@@ -1123,9 +1123,18 @@ def process_extraction(
     compress     : pivot long→large (mois/saisons en colonnes). Disponible
                    pour time_step 'month','year-month','season','year-season'.
     expand       : retourne un dict {nom: DataFrame} au lieu d'un DataFrame.
-    suffix       : liste de suffixes appliqués en produit cartésien avec func.
+    suffix       : liste de suffixes appliqués en produit cartésien avec func,
+                   pour répéter un même calcul sur plusieurs colonnes.
                    Ex : func={"QA": (np.nanmean, "Q")}, suffix=["obs","sim"]
                    donne QA_obs (sur Q_obs) et QA_sim (sur Q_sim).
+                   Une référence de colonne n'est suffixée que si la colonne
+                   suffixée existe, sinon la colonne de base est conservée :
+                   un calcul peut donc faire varier un seul argument (un
+                   seuil par exemple) tout en partageant les autres séries.
+                   Les kwargs-colonnes suivent la même règle. Une fonction
+                   dont aucune référence n'a de variante suffixée ne dépend
+                   pas du scénario : elle est calculée une seule fois et sort
+                   sans suffixe.
     suffix_delimiter : délimiteur variable/suffixe (défaut "_").
     drop_duplicates : si True, supprime les lignes dupliquées (même série,
                    même date) en gardant la première occurrence. Si False
@@ -1393,15 +1402,41 @@ def process_extraction(
     funct_list = _normalize_funct(funct, funct_args, nameEX, is_date_global=is_date)
 
     # --- Expansion suffix (produit cartésien funct × suffix) ---
+    # Une référence de colonne n'est suffixée que si la colonne suffixée
+    # existe réellement ; sinon la colonne de base est conservée. Une
+    # fonction dont aucune référence n'a de variante suffixée ne dépend pas
+    # du scénario : elle est calculée une seule fois, sans suffixe. C'est ce
+    # qui permet de faire varier un seul argument (un seuil par exemple)
+    # pendant que les séries partagées restent communes à tous les suffixes.
     if suffix:
         delim = suffix_delimiter or "_"
+        value_set = set(value_cols)
         expanded = []
+        emitted_bare: set = set()
         for (var_name, fn, col_names, funct_kwargs, skip_na, var_is_date) in funct_list:
             for s in suffix:
                 full_s = f"{delim}{s}"
                 new_name = f"{var_name}{full_s}"
+                suffixed = False
+                new_kwargs = funct_kwargs
                 if col_names:
-                    new_col_names = [f"{c}{full_s}" for c in col_names]
+                    new_col_names = []
+                    for c in col_names:
+                        cand = f"{c}{full_s}"
+                        if cand in value_set:
+                            new_col_names.append(cand)
+                            suffixed = True
+                        else:
+                            new_col_names.append(c)
+                    # Les kwargs-colonnes (ex. {"threshold": "Qlim"}) suivent
+                    # la même règle : ce sont des références comme les autres.
+                    new_kwargs = {}
+                    for k, v in funct_kwargs.items():
+                        if isinstance(v, str) and f"{v}{full_s}" in value_set:
+                            new_kwargs[k] = f"{v}{full_s}"
+                            suffixed = True
+                        else:
+                            new_kwargs[k] = v
                 else:
                     # Auto-détection : colonne numérique se terminant par full_s
                     matches = [c for c in value_cols if c.endswith(full_s)]
@@ -1418,7 +1453,14 @@ def process_extraction(
                             "Spécifiez la colonne de base dans le tuple func."
                         )
                     new_col_names = matches
-                expanded.append((new_name, fn, new_col_names, funct_kwargs, skip_na, var_is_date))
+                    suffixed = True
+                if suffixed:
+                    expanded.append((new_name, fn, new_col_names, new_kwargs,
+                                     skip_na, var_is_date))
+                elif var_name not in emitted_bare:
+                    emitted_bare.add(var_name)
+                    expanded.append((var_name, fn, col_names, funct_kwargs,
+                                     skip_na, var_is_date))
         funct_list = expanded
 
     # Résolution des références de colonnes (kwargs-colonnes, alias date)

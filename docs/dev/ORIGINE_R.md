@@ -54,6 +54,19 @@ Ces écarts sont assumés et ne seront pas « corrigés » :
 - **process_trend** : les colonnes listes de R deviennent des colonnes
   séparées (`period_trend_start` / `period_trend_end`, etc.) et `H` est
   un booléen nullable (NA si moins de 3 valeurs valides).
+- **`suffix` se décide par argument, pas par fonction.** R teste si au
+  moins un argument d'une fonction admet une variante suffixée présente
+  dans les données (`where_no_suffix`) ; si oui il suffixe alors *tous*
+  ses arguments d'un bloc, et ceux qui n'ont pas de variante deviennent
+  NA puis sont passés à la fonction comme chaînes littérales. Un calcul
+  mêlant une série partagée et une colonne qui varie par scénario y est
+  donc silencieusement faux. stase applique la règle référence par
+  référence : la colonne suffixée si elle existe, la colonne de base
+  sinon, kwargs-colonnes compris. La sortie est suffixée dès qu'une
+  référence l'a été, et une fonction dont aucune référence ne varie est
+  émise une seule fois sans suffixe (donc calculée une fois, pas une
+  fois par suffixe). Sur le cas nominal du R, où toutes les colonnes
+  référencées ont une variante, le résultat est inchangé.
 - **Tirage des ex-æquo en LTP** : comme en R (ties.method='random',
   choix documenté dans tools.R, Hamed 2008 ne prescrit rien), mais
   rendu reproductible par le paramètre `seed` de `stase.trend`.
