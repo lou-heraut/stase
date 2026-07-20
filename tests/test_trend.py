@@ -36,8 +36,13 @@ def raw():
     return df
 
 
-def assert_matches_ref(py, ref_name, numeric_cols, date_cols=(), atol=1e-10):
-    ref = pd.read_csv(REF / f"{ref_name}.csv").rename(columns=_REF_RENAMES)
+def assert_matches_ref(py, ref_name, numeric_cols, date_cols=(), atol=1e-10,
+                       renames=None):
+    """renames : surcharge de la table de traduction, pour les cas où une
+    colonne R correspond à une AUTRE colonne Python que par défaut (une
+    sortie R polymorphe est désormais scindée en absolu et relatif)."""
+    ref = pd.read_csv(REF / f"{ref_name}.csv").rename(
+        columns={**_REF_RENAMES, **(renames or {})})
     key = ["ID", "variable"]
     py = py.sort_values(key).reset_index(drop=True)
     ref = ref.sort_values(key).reset_index(drop=True)
@@ -69,12 +74,23 @@ def test_sc1_inde_normalise(raw):
 
 
 def test_sc2_ar1_no_normalise(raw):
+    """relative=False : divergence assumée avec R (cf. ORIGINE_R.md).
+
+    R recopiait la pente absolue dans a_normalise, si bien qu'une même
+    colonne portait des unités différentes selon la variable. Ici
+    a_relative vaut NaN et l'absolu vit dans a / a_min / a_max, qui
+    reprennent exactement les valeurs de référence R.
+    """
     py = process_trend(raw, level=0.1, dependency="AR1",
                        relative=False, verbose=False)
-    assert_matches_ref(py, "pt_sc2_ar1_nonorm",
-                       ["p", "a", "b", "a_relative",
-                        "a_relative_min", "a_relative_max"],
-                       DATE_BASE)
+    assert_matches_ref(py, "pt_sc2_ar1_nonorm", ["p", "a", "b"], DATE_BASE)
+    assert_matches_ref(py, "pt_sc2_ar1_nonorm", ["a_min", "a_max"],
+                       renames={"a_normalise_min": "a_min",
+                                "a_normalise_max": "a_max"})
+    assert py["a_relative"].isna().all()
+    assert py["a_relative_min"].isna().all()
+    # mean_period est désormais toujours calculée, R la laissait vide ici
+    assert py["mean_period"].notna().all()
 
 
 def test_sc3_inde_period_trend(raw):
@@ -91,13 +107,22 @@ def test_sc4_inde_period_change(raw):
                        period_change=[["1990-01-01", "2004-12-31"],
                                       ["2005-01-01", "2019-12-31"]],
                        verbose=False)
+    # Le 'change' de R est un pourcentage ici (relative=True) : c'est
+    # notre change_relative. Notre 'change' porte l'écart absolu, que R
+    # ne produisait pas.
     assert_matches_ref(
         py, "pt_sc4_inde_change",
-        NUM_BASE + ["change", "change_min", "change_max",
+        NUM_BASE + ["change_relative", "change_relative_min",
+                    "change_relative_max",
                     "mean_period_change_1", "mean_period_change_2"],
         DATE_BASE + ["period_change_start_1", "period_change_end_1",
                      "period_change_start_2", "period_change_end_2"],
+        renames={"change": "change_relative",
+                 "change_min": "change_relative_min",
+                 "change_max": "change_relative_max"},
     )
+    absolute = py["mean_period_change_2"] - py["mean_period_change_1"]
+    assert py["change"].to_numpy() == pytest.approx(absolute.to_numpy())
 
 
 def test_sc5_extreme_no_signif(raw):
@@ -207,3 +232,56 @@ def test_empty_input_returns_typed_empty():
                           .astype({"Date": "datetime64[ns]"}))
     assert len(t) == 0
     assert "ID" in t.columns and "H" in t.columns
+
+
+# ── Suffixes : nom de base, mise en commun des bornes, relative ──────────────
+
+def _suffixed(cols, n=30, ids=("S1", "S2", "S3"), seed=1):
+    """Une colonne par nom de variable demandé, même forme temporelle."""
+    rng = np.random.default_rng(seed)
+    frames = []
+    for sid in ids:
+        dates = pd.date_range("1990-01-01", periods=n, freq="YS")
+        d = {"ID": sid, "Date": dates}
+        for i, c in enumerate(cols):
+            d[c] = 50 + (0.3 + 0.2 * i) * np.arange(n) + rng.normal(0, 0.5, n)
+        frames.append(pd.DataFrame(d))
+    return pd.concat(frames, ignore_index=True)
+
+
+def test_suffix_is_stripped_only_at_the_end():
+    """Un suffixe 'sim' ne doit pas amputer une variable 'QA_simple'."""
+    t = process_trend(_suffixed(["QA_sim", "QA_simple"]),
+                      suffix=["sim"], verbose=False)
+    got = dict(zip(t["variable"], t["variable_no_suffix"]))
+    assert got["QA_sim"] == "QA"
+    assert got["QA_simple"] == "QA_simple"
+
+
+def test_pool_suffixes_shares_the_extreme_bounds():
+    data = _suffixed(["QA_obs", "QA_sim"])
+    apart = process_trend(data, suffix=["obs", "sim"], verbose=False)
+    pooled = process_trend(data, suffix=["obs", "sim"],
+                           extremes_pool_suffixes=True, verbose=False)
+
+    # Par défaut chaque variante a ses propres bornes...
+    apart_bounds = apart.groupby("variable")["a_relative_min"].first()
+    assert apart_bounds["QA_obs"] != apart_bounds["QA_sim"]
+    # ...et mises en commun, les deux deviennent comparables.
+    pooled_bounds = pooled.groupby("variable")["a_relative_min"].first()
+    assert pooled_bounds["QA_obs"] == pooled_bounds["QA_sim"]
+
+
+def test_relative_falls_back_on_the_base_name():
+    """{'QA': False} couvre QA_obs et QA_sim sans les nommer un par un."""
+    t = process_trend(_suffixed(["QA_obs", "QA_sim"]),
+                      suffix=["obs", "sim"], relative={"QA": False},
+                      verbose=False)
+    assert t["a_relative"].isna().all()
+    assert t["a"].notna().all()
+
+
+def test_relative_dict_must_cover_every_variable():
+    with pytest.raises(ValueError, match="ne couvre pas"):
+        process_trend(_suffixed(["QA", "QJXA"]),
+                      relative={"QA": True, "autre": False}, verbose=False)

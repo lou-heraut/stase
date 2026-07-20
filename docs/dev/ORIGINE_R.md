@@ -70,6 +70,32 @@ Ces écarts sont assumés et ne seront pas « corrigés » :
 - **Tirage des ex-æquo en LTP** : comme en R (ties.method='random',
   choix documenté dans tools.R, Hamed 2008 ne prescrit rien), mais
   rendu reproductible par le paramètre `seed` de `stase.trend`.
+- **Unité des indicateurs de tendance** (2026-07-20). En R,
+  `a_normalise` contenait la pente en % de la moyenne quand la variable
+  était normalisée, et une COPIE de la pente absolue `a` sinon ; idem
+  pour `change`. Deux variables d'une même sortie pouvaient donc se
+  retrouver dans des unités différentes sous le même nom de colonne,
+  sans rien pour les distinguer (seul `mean_period_trend` à NA le
+  laissait deviner). stase sépare les deux registres : `a` et `change`
+  portent toujours l'absolu, `a_relative` et `change_relative` toujours
+  le pourcentage, et ces dernières valent NaN quand la variable n'est
+  pas relative. Aucune information n'est perdue, la copie du R étant
+  redondante avec `a`. Les bornes de quantiles suivent la même
+  séparation : `a_min`/`a_max` et `change_min`/`change_max` (nouvelles,
+  dans l'unité de la variable) reprennent les valeurs des
+  `a_normalise_min`/`max` du R dans le cas non normalisé, et
+  `a_relative_min`/`max`, `change_relative_min`/`max` les reprennent
+  dans le cas normalisé. `mean_period` est désormais toujours calculée.
+  Divergences figées par `tests/test_trend.py` (scénarios 2 et 4), qui
+  continuent de vérifier la parité R sur `a`, `p` et `b`.
+- **Le paramètre `meta=` de `process_trend` a été retiré** (2026-07-20).
+  Il acceptait la table de métadonnées de `card.extract`, ce qui faisait
+  dépendre stase du format d'un paquet aval, et il court-circuitait la
+  validation de `relative` (une variable non couverte y retombait
+  silencieusement sur `True`, au lieu de lever). Le caractère relatif se
+  passe désormais par `relative={variable: bool}`, la forme générique
+  déjà validée contre les goldens R. C'est à card de traduire ses
+  fiches.
 
 ## Noms hérités du R
 

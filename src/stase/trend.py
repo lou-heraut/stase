@@ -22,7 +22,7 @@ Mann-Kendall + Sen-Theil per series and per variable.
 Usage
 -----
 from stase import process_trend
-trend = process_trend(data, MK_level=0.1, time_dependency_option="INDE")
+trend = process_trend(data, level=0.1, dependency="INDE")
 """
 
 import warnings
@@ -42,7 +42,7 @@ _ID_SEP = "\x1f"
 
 # ── Per-series helpers ───────────────────────────────────────────────────────
 
-def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm,
+def _mk_series(grp, var, date_col, level, option, advanced_stats, to_norm,
                rng=None):
     """MK test + intercept b + period range + normalised slope for one series."""
     grp = grp.sort_values(date_col)
@@ -51,10 +51,10 @@ def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm,
 
     # Mann-Kendall
     mk = GeneralMannKendall(
-        X, level=MK_level,
+        X, level=level,
         time_dependency_option=option,
         do_detrending=True,
-        show_advance_stat=show_advance_stat,
+        show_advance_stat=advanced_stats,
         rng=rng,
     )
 
@@ -77,29 +77,30 @@ def _mk_series(grp, var, date_col, MK_level, option, show_advance_stat, to_norm,
     period_start = pd.Timestamp(dates_ns.min()) if len(dates_ns) > 0 else pd.NaT
     period_end   = pd.Timestamp(dates_ns.max()) if len(dates_ns) > 0 else pd.NaT
 
-    # Normalised slope
+    # Pente relative. 'a' porte toujours la pente absolue ; 'a_relative'
+    # ne porte QUE le pourcentage, et vaut NaN quand la variable ne
+    # s'exprime pas relativement (une date, un compte). Le R recopiait
+    # 'a' dans 'a_normalise' dans ce cas : deux variables d'une même
+    # sortie s'y retrouvaient dans des unités différentes sous le même
+    # nom de colonne, sans rien pour les distinguer.
     valid = ~np.isnan(X)
     mean_val = float(np.nanmean(X)) if valid.any() else np.nan
     a_val = mk.get("a")
-    if to_norm:
-        if (a_val is not None and np.isfinite(float(a_val))
-                and np.isfinite(mean_val) and mean_val != 0.0):
-            a_normalise = float(a_val) / mean_val * 100.0
-        else:
-            a_normalise = np.nan
-        mean_period_trend = mean_val if np.isfinite(mean_val) else np.nan
+    if (to_norm and a_val is not None and np.isfinite(float(a_val))
+            and np.isfinite(mean_val) and mean_val != 0.0):
+        a_relative = float(a_val) / mean_val * 100.0
     else:
-        a_normalise = (float(a_val) if (a_val is not None and np.isfinite(float(a_val)))
-                       else np.nan)
-        mean_period_trend = np.nan
+        a_relative = np.nan
 
     out = dict(mk)
     out.update({
         "b":               b,
         "period_start":    period_start,
         "period_end":      period_end,
-        "mean_period":     mean_period_trend,
-        "a_relative":      a_normalise,
+        # Toujours calculée : la moyenne de la période est définie que la
+        # variable soit relative ou non.
+        "mean_period":     mean_val if np.isfinite(mean_val) else np.nan,
+        "a_relative":      a_relative,
     })
     return pd.Series(out)
 
@@ -122,12 +123,18 @@ def _change_series(grp, var, date_col, period_change, to_norm):
     mean_1 = float(np.nanmean(X[m1.values])) if m1.any() else np.nan
     mean_2 = float(np.nanmean(X[m2.values])) if m2.any() else np.nan
 
-    if (to_norm and np.isfinite(mean_1) and mean_1 != 0.0 and np.isfinite(mean_2)):
-        change = (mean_2 - mean_1) / mean_1 * 100.0
-    elif np.isfinite(mean_1) and np.isfinite(mean_2):
+    # Même séparation que pour la pente : 'change' est toujours la
+    # différence absolue des moyennes, 'change_relative' toujours un
+    # pourcentage, NaN si la variable n'est pas relative.
+    if np.isfinite(mean_1) and np.isfinite(mean_2):
         change = mean_2 - mean_1
     else:
         change = np.nan
+
+    if to_norm and np.isfinite(change) and mean_1 != 0.0:
+        change_relative = change / mean_1 * 100.0
+    else:
+        change_relative = np.nan
 
     return pd.Series({
         "period_change_start_1":  s1,    "period_change_end_1":  e1,
@@ -135,10 +142,11 @@ def _change_series(grp, var, date_col, period_change, to_norm):
         "mean_period_change_1":   mean_1,
         "mean_period_change_2":   mean_2,
         "change":                 change,
+        "change_relative":        change_relative,
     })
 
 
-def _empty_trend_frame(id_cols, has_suffix, has_change, show_advance_stat):
+def _empty_trend_frame(id_cols, has_suffix, has_change, advanced_stats):
     """Retour vide typé : zéro ligne mais les colonnes standard de la
     sortie, pour que les filtres et merges aval fonctionnent uniformément."""
     cols: dict = {}
@@ -151,13 +159,13 @@ def _empty_trend_frame(id_cols, has_suffix, has_change, show_advance_stat):
     cols["H"] = pd.array([], dtype="boolean")
     cols["p"] = pd.Series(dtype="float64")
     cols["a"] = pd.Series(dtype="float64")
-    if show_advance_stat:
+    if advanced_stats:
         cols["stat"] = pd.Series(dtype="float64")
         cols["dep"] = pd.Series(dtype="float64")
     cols["b"] = pd.Series(dtype="float64")
     cols["period_start"] = pd.Series(dtype="datetime64[ns]")
     cols["period_end"] = pd.Series(dtype="datetime64[ns]")
-    for c in ("mean_period", "a_relative",
+    for c in ("a_min", "a_max", "mean_period", "a_relative",
               "a_relative_min", "a_relative_max"):
         cols[c] = pd.Series(dtype="float64")
     if has_change:
@@ -165,7 +173,9 @@ def _empty_trend_frame(id_cols, has_suffix, has_change, show_advance_stat):
                   "period_change_start_2", "period_change_end_2"):
             cols[c] = pd.Series(dtype="datetime64[ns]")
         for c in ("mean_period_change_1", "mean_period_change_2",
-                  "change", "change_min", "change_max"):
+                  "change", "change_min", "change_max",
+                  "change_relative", "change_relative_min",
+                  "change_relative_max"):
             cols[c] = pd.Series(dtype="float64")
     return pd.DataFrame(cols)
 
@@ -179,10 +189,9 @@ def process_trend(
     suffix=None,
     suffix_delimiter="_",
     relative=True,
-    meta=None,
     extremes_include_non_significant=True,
-    extremes_series=None,
-    extremes_by_suffix=True,
+    extremes_from_series=None,
+    extremes_pool_suffixes=False,
     period=None,
     period_change=None,
     extremes_prob=0.01,
@@ -204,25 +213,28 @@ def process_trend(
         'INDE' (test standard), 'AR1' (Hamed & Rao 1998) ou 'LTP'
         (Hamed 2008 ; prévu pour des séries annuelles).
     suffix : list[str] | None
-        Suffixes de noms de variables à retirer pour le regroupement des
-        extrêmes et la consultation de meta.
+        Suffixes de noms de variables (QA_obs, QA_sim). Sert à retrouver
+        le nom de base : colonne de sortie 'variable_no_suffix',
+        regroupement des extrêmes, et repli de `relative` sur le nom de
+        base. Le suffixe est retiré en FIN de nom uniquement.
     suffix_delimiter : str
         Délimiteur préfixant chaque suffixe (défaut '_').
     relative : bool | dict[str, bool]
-        Calcule a_relative = a / mean(X) * 100 (pente en % de la
-        moyenne). Bool global ou dict par variable.
-    meta : DataFrame | None
-        Table de métadonnées avec colonnes {'variable_en', 'relative'}
-        (table meta de card.extract), prioritaire sur `relative`.
+        La variable s'exprime-t-elle en % de sa moyenne ? Bool global ou
+        dict par variable, auquel cas TOUTES les variables doivent être
+        couvertes (par leur nom exact ou leur nom de base), sinon
+        ValueError. Pilote a_relative et change_relative.
     extremes_include_non_significant : bool
         Si False, seules les séries significatives (H=True) contribuent
-        aux bornes de quantiles de a_relative.
-    extremes_series : list | None
-        Sous-ensemble d'identifiants de séries pour le calcul des
-        quantiles (None = toutes).
-    extremes_by_suffix : bool
-        Si True, quantiles groupés par nom de variable complet ; sinon
-        par nom de base (suffixe retiré).
+        aux bornes de quantiles.
+    extremes_from_series : list | None
+        Sous-ensemble d'identifiants de séries contribuant aux bornes de
+        quantiles (None = toutes). Ne filtre pas les lignes de sortie.
+    extremes_pool_suffixes : bool
+        Si True, les bornes de quantiles sont mises en commun entre les
+        variantes d'une même variable de base (QA_obs et QA_sim partagent
+        leurs bornes, donc sont comparables). Défaut False : chaque
+        variante a ses propres bornes. Sans effet si suffix est None.
     period : list | None
         [début, fin] ou liste de paires pour restreindre l'analyse.
     period_change : list | None
@@ -243,96 +255,98 @@ def process_trend(
 
     Sortie
     ------
-    DataFrame trié par (identifiant, variable), avec les colonnes :
-        {id}, variable, [variable_no_suffix], level, H (booléen
-        nullable, NA si moins de 3 valeurs valides), p, a (pente de Sen
-        par pas de temps), b, period_start, period_end, mean_period,
-        a_relative, a_relative_min, a_relative_max,
-        [period_change_start_1/end_1/start_2/end_2,
-         mean_period_change_1/2, change, change_min, change_max],
-        [stat, dep].
-    """
-    # Pont vers les noms internes historiques (hérités de la conversion R) :
-    # la logique interne est validée par les goldens, on ne la renomme pas.
-    dataEX = data
-    MK_level = level
-    time_dependency_option = dependency
-    to_normalise = relative
-    metaEX = meta
-    extreme_take_not_signif_into_account = extremes_include_non_significant
-    extreme_take_only_series = extremes_series
-    extreme_by_suffix = extremes_by_suffix
-    period_trend = period
-    extreme_prob = extremes_prob
-    show_advance_stat = advanced_stats
+    DataFrame trié par (identifiant, variable). Chaque indicateur existe
+    en deux colonnes d'unités DISTINCTES, jamais interchangeables :
+    l'absolue est toujours renseignée, la relative vaut NaN quand la
+    variable n'est pas relative.
 
+        {id}, variable, [variable_no_suffix], level,
+        H          test significatif (booléen nullable, NA si moins de
+                   3 valeurs valides), p
+        a          pente de Sen, en unité de la variable par pas de temps
+        a_min/max  bornes de quantiles de a, même unité
+        b          ordonnée à l'origine
+        period_start, period_end, mean_period
+        a_relative         pente en % de mean_period, ou NaN
+        a_relative_min/max bornes de quantiles de a_relative, ou NaN
+
+      avec period_change :
+        period_change_start_1/end_1/start_2/end_2,
+        mean_period_change_1/2
+        change                     mean_2 - mean_1, unité de la variable
+        change_min/max             bornes de quantiles de change
+        change_relative            même écart en % de mean_1, ou NaN
+        change_relative_min/max    bornes de quantiles, ou NaN
+
+      avec advanced_stats : stat, dep.
+    """
     # ── 1. Validate ───────────────────────────────────────────────────────────
-    if not isinstance(dataEX, pd.DataFrame):
+    if not isinstance(data, pd.DataFrame):
         raise TypeError(
-            f"data doit être un DataFrame pandas, reçu {type(dataEX).__name__}."
+            f"data doit être un DataFrame pandas, reçu {type(data).__name__}."
         )
-    if len(dataEX) == 0:
-        warnings.warn("dataEX est vide (0 lignes). Retour d'un DataFrame vide.", UserWarning)
-        _ids = [c for c in dataEX.columns
-                if pd.api.types.is_string_dtype(dataEX[c])
-                or dataEX[c].dtype == object]
+    if len(data) == 0:
+        warnings.warn("data est vide (0 lignes). Retour d'un DataFrame vide.", UserWarning)
+        _ids = [c for c in data.columns
+                if pd.api.types.is_string_dtype(data[c])
+                or data[c].dtype == object]
         return _empty_trend_frame(_ids, suffix is not None,
                                   period_change is not None,
-                                  show_advance_stat)
-    if time_dependency_option not in ("INDE", "AR1", "LTP"):
+                                  advanced_stats)
+    if dependency not in ("INDE", "AR1", "LTP"):
         raise ValueError(
-            f"dependency='{time_dependency_option}' invalide. "
+            f"dependency='{dependency}' invalide. "
             "Valeurs acceptées : 'INDE', 'AR1', 'LTP'."
         )
-    if not (0 < MK_level < 1):
-        raise ValueError(f"level={MK_level} doit être dans (0, 1).")
-    if not (0 < extreme_prob < 0.5):
+    if not (0 < level < 1):
+        raise ValueError(f"level={level} doit être dans (0, 1).")
+    if not (0 < extremes_prob < 0.5):
         raise ValueError(
-            f"extremes_prob={extreme_prob} invalide : doit être dans (0, 0.5)."
+            f"extremes_prob={extremes_prob} invalide : doit être dans (0, 0.5)."
         )
 
     # ── 2. Detect columns ─────────────────────────────────────────────────────
     from .extraction import _maybe_parse_iso_dates
-    dataEX = _maybe_parse_iso_dates(dataEX)
+    data = _maybe_parse_iso_dates(data)
     date_col = None
     id_cols  = []
     var_cols = []
-    for col in dataEX.columns:
-        if pd.api.types.is_datetime64_any_dtype(dataEX[col]):
+    for col in data.columns:
+        if pd.api.types.is_datetime64_any_dtype(data[col]):
             if date_col is not None:
                 raise ValueError(
-                    "dataEX contient plusieurs colonnes datetime. Une seule est attendue."
+                    "data contient plusieurs colonnes datetime. Une seule est attendue."
                 )
             date_col = col
-        elif (pd.api.types.is_string_dtype(dataEX[col])
-              or dataEX[col].dtype == object):
+        elif (pd.api.types.is_string_dtype(data[col])
+              or data[col].dtype == object):
             id_cols.append(col)
-        elif pd.api.types.is_numeric_dtype(dataEX[col]):
+        elif pd.api.types.is_numeric_dtype(data[col]):
             var_cols.append(col)
 
     if date_col is None:
         raise ValueError(
-            "dataEX ne contient aucune colonne datetime. "
+            "data ne contient aucune colonne datetime. "
             "Vérifiez que votre sortie de process_extraction est correcte."
         )
     if len(var_cols) == 0:
         raise ValueError(
-            "dataEX ne contient aucune colonne numérique (variable à analyser)."
+            "data ne contient aucune colonne numérique (variable à analyser)."
         )
 
     # ── 3. Normalize ID column(s) ─────────────────────────────────────────────
     original_id_cols = list(id_cols)
-    dataEX = dataEX.copy()
+    data = data.copy()
 
     if len(id_cols) == 0:
         # No ID: add synthetic column if dates are unique → single series
-        if dataEX[date_col].nunique() == len(dataEX):
+        if data[date_col].nunique() == len(data):
             warnings.warn(
                 "Aucune colonne identifiant (texte) trouvée. "
                 "Une colonne 'id' synthétique 'time serie' est ajoutée.",
                 UserWarning,
             )
-            dataEX["id"] = "time serie"
+            data["id"] = "time serie"
             id_col = "id"
         else:
             raise ValueError(
@@ -347,16 +361,16 @@ def process_trend(
         # so the split back at the end is lossless even when IDs contain
         # the display delimiter (e.g. "S_1"). R's tidyr::unite uses "_"
         # and has the ambiguity; we don't reproduce it.
-        dataEX["_ID_united"] = (
-            dataEX[id_cols].astype(str).agg(_ID_SEP.join, axis=1)
+        data["_ID_united"] = (
+            data[id_cols].astype(str).agg(_ID_SEP.join, axis=1)
         )
-        dataEX = dataEX.drop(columns=id_cols)
+        data = data.drop(columns=id_cols)
         id_col = "_ID_united"
 
     # Check date uniqueness per series (vectorized)
-    dup_mask = dataEX.duplicated(subset=[id_col, date_col])
+    dup_mask = data.duplicated(subset=[id_col, date_col])
     if dup_mask.any():
-        bad = dataEX.loc[dup_mask, id_col].unique().tolist()[:5]
+        bad = data.loc[dup_mask, id_col].unique().tolist()[:5]
         bad = [str(b).replace(_ID_SEP, "_") for b in bad]
         raise ValueError(
             f"Dates dupliquées dans les séries : {bad}. "
@@ -371,9 +385,9 @@ def process_trend(
     # entrée issue de process_extraction est déjà complète, l'opération
     # est alors sans effet).
     from .extraction import _complete_grid, _series_resolutions
-    dataEX = dataEX.sort_values([id_col, date_col]).reset_index(drop=True)
-    _res_by_id = _series_resolutions(dataEX, id_col, date_col)
-    dataEX, _n_added, _off_grid = _complete_grid(dataEX, id_col, date_col,
+    data = data.sort_values([id_col, date_col]).reset_index(drop=True)
+    _res_by_id = _series_resolutions(data, id_col, date_col)
+    data, _n_added, _off_grid = _complete_grid(data, id_col, date_col,
                                                  _res_by_id)
     if _off_grid:
         _preview = ", ".join(str(s).replace(_ID_SEP, "_")
@@ -406,17 +420,22 @@ def process_trend(
         suffix_full = None
 
     def _strip_suffix(var):
-        """Strip all suffixes from variable name (for base-name grouping)."""
-        name = var
+        """Retire le suffixe TERMINAL d'un nom de variable, s'il en porte un.
+
+        Ancré en fin de nom : un suffixe 'sim' ne doit pas amputer une
+        variable nommée 'QA_simple'. Un seul suffixe est retiré, celui
+        qui termine le nom.
+        """
         if suffix_full:
             for sf in suffix_full:
-                name = name.replace(sf, "")
-        return name
+                if var.endswith(sf):
+                    return var[:-len(sf)]
+        return var
 
-    # ── 5. Resolve to_normalise per variable ──────────────────────────────────
-    if isinstance(to_normalise, dict) and metaEX is None:
-        if len(to_normalise) == 1:
-            single_val = next(iter(to_normalise.values()))
+    # ── 5. Resolve relative per variable ──────────────────────────────────
+    if isinstance(relative, dict):
+        if len(relative) == 1:
+            single_val = next(iter(relative.values()))
             warnings.warn(
                 f"relative est une valeur unique ({single_val}), "
                 f"appliquée à toutes les variables : {var_cols}",
@@ -424,40 +443,39 @@ def process_trend(
             )
         else:
             missing = [v for v in var_cols
-                       if v not in to_normalise and _strip_suffix(v) not in to_normalise]
+                       if v not in relative and _strip_suffix(v) not in relative]
             if missing:
                 raise ValueError(
                     f"relative ne couvre pas toutes les variables : {missing}."
                 )
 
-    def _get_to_normalise(var):
-        if metaEX is not None:
-            base = _strip_suffix(var)
-            row = metaEX[metaEX["variable_en"] == base]
-            if len(row) > 0:
-                return bool(row["relative"].iloc[0])
-            return True
-        if isinstance(to_normalise, dict):
-            if var in to_normalise:
-                return bool(to_normalise[var])
-            base = _strip_suffix(var)
-            if base in to_normalise:
-                return bool(to_normalise[base])
-            # Single-value dict → use it for all
-            if len(to_normalise) == 1:
-                return bool(next(iter(to_normalise.values())))
-            return True
-        return bool(to_normalise)
+    def _is_relative(var):
+        """Cette variable s'exprime-t-elle en % de sa moyenne ?
 
-    # ── 6. Normalize period_trend ─────────────────────────────────────────────
-    if period_trend is not None:
+        Nom exact d'abord, nom de base ensuite : une extraction suffixée
+        peut donner {'QA': True} pour QA_obs comme pour QA_sim.
+        """
+        if isinstance(relative, dict):
+            if var in relative:
+                return bool(relative[var])
+            base = _strip_suffix(var)
+            if base in relative:
+                return bool(relative[base])
+            # Dict à valeur unique → appliquée à toutes (cf. warning ci-dessus)
+            if len(relative) == 1:
+                return bool(next(iter(relative.values())))
+            return True
+        return bool(relative)
+
+    # ── 6. Normalize period ─────────────────────────────────────────────
+    if period is not None:
         # Accept flat [start, end] or list of lists
-        if (not isinstance(period_trend[0], (list, tuple))
-                and not isinstance(period_trend[0], pd.Timestamp)):
+        if (not isinstance(period[0], (list, tuple))
+                and not isinstance(period[0], pd.Timestamp)):
             # It's already a flat pair
-            period_trend = [period_trend]
+            period = [period]
         periods = []
-        for pt in period_trend:
+        for pt in period:
             p0 = pd.Timestamp(pt[0]) if pt[0] is not None else None
             p1 = pd.Timestamp(pt[1]) if pt[1] is not None else None
             if p0 is not None and p1 is not None and p0 > p1:
@@ -491,11 +509,11 @@ def process_trend(
 
     # ── 7bis. Garde-fous LTP ──────────────────────────────────────────────────
     _rng = None
-    if time_dependency_option == "LTP":
+    if dependency == "LTP":
         _rng = np.random.default_rng(seed)
         # séries longues : le calcul de variance LTP est en O(n⁴)
         # (mémoire bornée par blocs, mais temps de calcul important)
-        _n_max = int(dataEX.groupby(id_col, observed=True)[var_cols]
+        _n_max = int(data.groupby(id_col, observed=True)[var_cols]
                      .count().max().max())
         if _n_max > 200:
             warnings.warn(
@@ -508,7 +526,7 @@ def process_trend(
         # ex-æquo sans seed : résultats non reproductibles
         if seed is None:
             _has_ties = any(
-                dataEX[[id_col, v]].dropna(subset=[v])
+                data[[id_col, v]].dropna(subset=[v])
                 .duplicated([id_col, v]).any()
                 for v in var_cols
             )
@@ -524,15 +542,15 @@ def process_trend(
 
     # ── 8. Main loop ──────────────────────────────────────────────────────────
     if verbose:
-        n_st = dataEX[id_col].nunique()
-        _ids = dataEX[id_col].unique()
+        n_st = data[id_col].nunique()
+        _ids = data[id_col].unique()
         _preview = ", ".join(str(s).replace(_ID_SEP, "_") for s in _ids[:3])
         if n_st > 3:
             _preview += f", … (+{n_st - 3})"
-        _d0 = dataEX[date_col].min().date()
-        _d1 = dataEX[date_col].max().date()
+        _d0 = data[date_col].min().date()
+        _d1 = data[date_col].max().date()
         _rows = [
-            f"option     {time_dependency_option:<8}  level  {MK_level}",
+            f"option     {dependency:<8}  level  {level}",
             f"séries     {n_st}  ({_preview})",
             f"variables  {', '.join(var_cols)}",
             f"période    {_d0} → {_d1}  [{len(periods)} fenêtre(s)]",
@@ -542,10 +560,10 @@ def process_trend(
     all_results = []
 
     for j, (p0, p1) in enumerate(periods):
-        real_p0 = p0 if p0 is not None else dataEX[date_col].min()
-        real_p1 = p1 if p1 is not None else dataEX[date_col].max()
-        mask = (dataEX[date_col] >= real_p0) & (dataEX[date_col] <= real_p1)
-        data_j = dataEX[mask]
+        real_p0 = p0 if p0 is not None else data[date_col].min()
+        real_p1 = p1 if p1 is not None else data[date_col].max()
+        mask = (data[date_col] >= real_p0) & (data[date_col] <= real_p1)
+        data_j = data[mask]
 
         if verbose:
             print(f"  Période {j + 1}/{len(periods)} : "
@@ -555,8 +573,8 @@ def process_trend(
             warnings.warn(
                 f"Période {j + 1} : aucune donnée dans la plage "
                 f"{real_p0.date()} → {real_p1.date()}. "
-                f"Données disponibles : {dataEX[date_col].min().date()} "
-                f"→ {dataEX[date_col].max().date()}.",
+                f"Données disponibles : {data[date_col].min().date()} "
+                f"→ {data[date_col].max().date()}.",
                 UserWarning,
             )
             continue
@@ -564,7 +582,7 @@ def process_trend(
         period_rows = []
 
         for var in var_cols:
-            to_norm = _get_to_normalise(var)
+            to_norm = _is_relative(var)
             var_no_suffix = _strip_suffix(var)
             var_data = data_j[[id_col, date_col, var]]
 
@@ -576,9 +594,9 @@ def process_trend(
                     _mk_series,
                     var=var,
                     date_col=date_col,
-                    MK_level=MK_level,
-                    option=time_dependency_option,
-                    show_advance_stat=show_advance_stat,
+                    level=level,
+                    option=dependency,
+                    advanced_stats=advanced_stats,
                     to_norm=to_norm,
                     rng=_rng,
                     include_groups=False,
@@ -615,44 +633,47 @@ def process_trend(
 
         period_df = pd.concat(period_rows, ignore_index=True)
 
-        # ── Extreme trend quantiles per variable group ───────────────────────
+        # ── Bornes de quantiles par groupe de variables ──────────────────────
+        # Chaque indicateur a les siennes, dans SON unité : 'a' et
+        # 'change' en absolu, 'a_relative' et 'change_relative' en %.
+        # Une variable non relative a donc des bornes absolues utilisables
+        # et des bornes relatives à NaN, au lieu de bornes muettes sur
+        # leur unité.
         group_var = ("variable_no_suffix"
-                     if (not extreme_by_suffix and suffix_full is not None
+                     if (extremes_pool_suffixes and suffix_full is not None
                          and "variable_no_suffix" in period_df.columns)
                      else "variable")
 
-        if extreme_take_only_series is None:
-            in_series = period_df[id_col].notna()   # all rows
+        if extremes_from_series is None:
+            in_series = period_df[id_col].notna().to_numpy()   # toutes
         else:
-            in_series = period_df[id_col].isin(extreme_take_only_series)
+            in_series = period_df[id_col].isin(extremes_from_series).to_numpy()
 
-        # Temporarily mask non-significant slopes if requested
-        if not extreme_take_not_signif_into_account:
-            saved_a_norm = period_df["a_relative"].copy()
-            period_df.loc[~period_df["H"].fillna(False), "a_relative"] = np.nan
+        # Séries non significatives exclues du calcul des bornes plutôt
+        # que masquées puis restaurées : même résultat, pas d'état à
+        # rétablir.
+        if not extremes_include_non_significant:
+            in_series = in_series & period_df["H"].fillna(False).to_numpy()
 
-        for var_grp, grp_idx in period_df.groupby(group_var, observed=True).groups.items():
-            grp_mask = period_df.index.isin(grp_idx)          # boolean mask for this group
-            sel_mask = grp_mask & in_series.values
-            a_vals = period_df.loc[sel_mask, "a_relative"].dropna()
-            q_min = float(a_vals.quantile(extreme_prob))       if len(a_vals) > 0 else np.nan
-            q_max = float(a_vals.quantile(1 - extreme_prob))   if len(a_vals) > 0 else np.nan
-            period_df.loc[grp_mask, "a_relative_min"] = q_min
-            period_df.loc[grp_mask, "a_relative_max"] = q_max
-
-        if not extreme_take_not_signif_into_account:
-            period_df["a_relative"] = saved_a_norm
-
-        # ── Extreme change quantiles ─────────────────────────────────────────
+        pairs = [("a", "a_min", "a_max"),
+                 ("a_relative", "a_relative_min", "a_relative_max")]
         if pc_pairs is not None and "change" in period_df.columns:
-            for var_grp, grp_idx in period_df.groupby(group_var, observed=True).groups.items():
-                grp_mask = period_df.index.isin(grp_idx)
-                sel_mask = grp_mask & in_series.values
-                ch_vals = period_df.loc[sel_mask, "change"].dropna()
-                c_min = float(ch_vals.quantile(extreme_prob))     if len(ch_vals) > 0 else np.nan
-                c_max = float(ch_vals.quantile(1 - extreme_prob)) if len(ch_vals) > 0 else np.nan
-                period_df.loc[grp_mask, "change_min"] = c_min
-                period_df.loc[grp_mask, "change_max"] = c_max
+            pairs += [("change", "change_min", "change_max"),
+                      ("change_relative", "change_relative_min",
+                       "change_relative_max")]
+
+        for grp_idx in period_df.groupby(group_var, observed=True).groups.values():
+            grp_mask = period_df.index.isin(grp_idx)
+            sel_mask = grp_mask & in_series
+            for src, col_min, col_max in pairs:
+                vals = period_df.loc[sel_mask, src].dropna()
+                if len(vals) > 0:
+                    q_min = float(vals.quantile(extremes_prob))
+                    q_max = float(vals.quantile(1 - extremes_prob))
+                else:
+                    q_min = q_max = np.nan
+                period_df.loc[grp_mask, col_min] = q_min
+                period_df.loc[grp_mask, col_max] = q_max
 
         all_results.append(period_df)
 
@@ -665,7 +686,7 @@ def process_trend(
         return _empty_trend_frame(original_id_cols or ["ID"],
                                   suffix_full is not None,
                                   pc_pairs is not None,
-                                  show_advance_stat)
+                                  advanced_stats)
 
     result = pd.concat(all_results, ignore_index=True)
     result = result.sort_values([id_col, "variable"]).reset_index(drop=True)
