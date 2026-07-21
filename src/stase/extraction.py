@@ -262,12 +262,21 @@ def _maybe_parse_iso_dates(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def _detect_columns(data: pd.DataFrame) -> tuple[str, str | None, list[str]]:
-    """Retourne (date_col, id_col, value_cols)."""
+def _detect_columns(data: pd.DataFrame,
+                    param_cols=()) -> tuple[str, str | None, list[str]]:
+    """Retourne (date_col, id_col, value_cols).
+
+    Les colonnes de param_cols (fournies par l'appelant, souvent des
+    dates constantes par série) sont mises de côté : ni axe, ni id, ni
+    valeur. Une fois exclues, l'axe et l'id tombent par élimination.
+    """
+    param_cols = set(param_cols)
     date_col = None
     id_col = None
     value_cols = []
     for col in data.columns:
+        if col in param_cols:
+            continue
         if pd.api.types.is_datetime64_any_dtype(data[col]):
             if date_col is not None:
                 raise ValueError("Plus d'une colonne datetime trouvée.")
@@ -1086,6 +1095,7 @@ def process_extraction(
     expand: bool = False,
     suffix: list[str] | None = None,
     suffix_delimiter: str = "_",
+    param_cols: list[str] | None = None,
     drop_duplicates: bool = False,
     keep: str | None = None,
     max_na_years: float | None = None,
@@ -1136,6 +1146,14 @@ def process_extraction(
                    pas du scénario : elle est calculée une seule fois et sort
                    sans suffixe.
     suffix_delimiter : délimiteur variable/suffixe (défaut "_").
+    param_cols   : colonnes de paramètre fournies par l'appelant (souvent
+                   des dates, constantes par série). Mises de côté à la
+                   détection (l'axe et l'id tombent par élimination),
+                   référençables par une fonction (tout dtype), exclues du
+                   canal numérique (value_cols, max_na_years), suffixables,
+                   et CONSERVÉES dans la sortie pour traverser un
+                   enchaînement de process. Une valeur non constante par
+                   série lève une ValueError.
     drop_duplicates : si True, supprime les lignes dupliquées (même série,
                    même date) en gardant la première occurrence. Si False
                    (défaut), lève une ValueError explicite.
@@ -1164,6 +1182,8 @@ def process_extraction(
     is_date = False
     rm_duplicates = drop_duplicates
     NAyear_lim = max_na_years
+    param_cols = [c for c in (param_cols or [])
+                  if c in getattr(data, "columns", [])]
 
     if not isinstance(data, pd.DataFrame):
         raise TypeError(
@@ -1179,7 +1199,7 @@ def process_extraction(
                    period=period, max_na_pct=NApct_lim,
                    drop_na_pct=rmNApct, name=nameEX, seasons=Seasons,
                    compress=compress, expand=expand, suffix=suffix,
-                   suffix_delimiter=suffix_delimiter,
+                   suffix_delimiter=suffix_delimiter, param_cols=param_cols,
                    drop_duplicates=rm_duplicates, keep=keep,
                    max_na_years=NAyear_lim, verbose=verbose)
         return _process_adaptive(data, sampling_period, _kw)
@@ -1281,7 +1301,7 @@ def process_extraction(
         if compress or expand or keep == "all":
             return pd.DataFrame()
         try:
-            _dc, _id, _ = _detect_columns(data)
+            _dc, _id, _ = _detect_columns(data, param_cols)
             _names = [n for (n, *_) in
                       _normalize_funct(funct, funct_args, nameEX,
                                        is_date_global=is_date)]
@@ -1309,7 +1329,7 @@ def process_extraction(
     # --- Conversion automatique des dates ISO non ambiguës (texte) ---
     data = _maybe_parse_iso_dates(data)
 
-    date_col, id_col, value_cols = _detect_columns(data)
+    date_col, id_col, value_cols = _detect_columns(data, param_cols)
 
     # --- Colonne date stockée comme string ? ---
     if date_col is None:
@@ -1356,6 +1376,20 @@ def process_extraction(
     # le même sens qu'avant pour rm_duplicates.
     data = (data.sort_values([id_col] + ([date_col] if date_col else []))
             .reset_index(drop=True))
+
+    # --- Colonnes de paramètre : constantes par série, conservées à la fin ---
+    # Instantané pris MAINTENANT (valeurs propres, avant la grille qui pose des
+    # NaN sur les pas insérés) : validation de constance + valeur par série.
+    param_pv = None
+    if param_cols:
+        _nun = data.groupby(id_col, observed=True)[param_cols].nunique(dropna=True)
+        _bad = _nun.index[(_nun > 1).any(axis=1)].tolist()
+        if _bad:
+            raise ValueError(
+                "param_cols doit être constant par série (une seule valeur "
+                f"par série) ; séries à valeurs multiples : {_bad[:5]}."
+            )
+        param_pv = data.groupby(id_col, observed=True)[param_cols].first()
 
     # --- Dates dupliquées (données triées : doublons adjacents) ---
     if date_col is not None:
@@ -1410,7 +1444,7 @@ def process_extraction(
     # pendant que les séries partagées restent communes à tous les suffixes.
     if suffix:
         delim = suffix_delimiter or "_"
-        value_set = set(value_cols)
+        value_set = set(value_cols) | set(param_cols)
         expanded = []
         emitted_bare: set = set()
         for (var_name, fn, col_names, funct_kwargs, skip_na, var_is_date) in funct_list:
@@ -1746,6 +1780,17 @@ def process_extraction(
                 out_sparse |= set(var_names)
             if out_sparse:
                 result.attrs[_SPARSE_ATTR] = sorted(out_sparse)
+
+        # colonnes de paramètre : conservées dans la sortie (constantes par
+        # série), pour traverser P1->P2. Déjà présentes sous keep='all'.
+        if param_pv is not None:
+            _keyed = pd.Series(result[id_col].astype(object).to_numpy(),
+                               index=result.index)
+            for _c in param_pv.columns:
+                if _c not in result.columns:
+                    _map = pd.Series(param_pv[_c].to_numpy(),
+                                     index=param_pv.index.astype(object))
+                    result[_c] = _keyed.map(_map)
 
         # noms de sortie : snake_case, date au nom de la colonne d'entrée
         result = _finalize_names(result, date_col)
@@ -2363,7 +2408,7 @@ def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
     """sampling_period adaptatif : calcule le mois de début par série puis
     ré-appelle process_extraction par groupe de séries partageant le même
     mois (équivalent fix_sampling_period + boucle par Code en R)."""
-    date_col, id_col, _ = _detect_columns(data)
+    date_col, id_col, _ = _detect_columns(data, kwargs.get("param_cols") or ())
     if date_col is None:
         raise ValueError(
             "sampling_period adaptatif : colonne datetime requise dans data."
