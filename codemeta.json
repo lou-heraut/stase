@@ -1,0 +1,73 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "stase",
+  "description": "Moteur d'agrégation de séries journalières hydroclimatiques et d'analyse de stationnarité : Mann-Kendall généralisé (INDE, AR1, LTP) et pente de Sen. Port Python du paquet R EXstat.",
+  "version": "0.5.0",
+  "datePublished": "2026-07-22",
+  "codeRepository": "https://github.com/lou-heraut/stase",
+  "issueTracker": "https://github.com/lou-heraut/stase/issues",
+  "license": "https://spdx.org/licenses/GPL-3.0-or-later",
+  "programmingLanguage": "Python",
+  "author": [
+    {
+      "@type": "Person",
+      "familyName": "Héraut",
+      "givenName": "Louis",
+      "email": "louis.heraut@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UR RiverLy, Villeurbanne, France"
+      }
+    },
+    {
+      "@type": "Person",
+      "familyName": "Dorchies",
+      "givenName": "David",
+      "email": "david.dorchies@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UMR G-Eau, Montpellier, France"
+      }
+    },
+    {
+      "@type": "Person",
+      "familyName": "Sauquet",
+      "givenName": "Éric",
+      "email": "eric.sauquet@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UR RiverLy, Villeurbanne, France"
+      }
+    },
+    {
+      "@type": "Person",
+      "familyName": "Vidal",
+      "givenName": "Jean-Philippe",
+      "email": "jean-philippe.vidal@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UR RiverLy, Villeurbanne, France"
+      }
+    }
+  ],
+  "keywords": [
+    "hydrologie",
+    "séries temporelles",
+    "Mann-Kendall",
+    "pente de Sen",
+    "stationnarité",
+    "agrégation"
+  ],
+  "operatingSystem": [
+    "Linux",
+    "macOS",
+    "Windows"
+  ],
+  "softwareRequirements": [
+    "Python >= 3.10",
+    "numpy",
+    "pandas >= 2.2",
+    "scipy"
+  ]
+}

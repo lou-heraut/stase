@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+message: >-
+  Si vous utilisez ce moteur ou son code, merci de citer ce dépôt. Un
+  identifiant pérenne (dépôt HAL adossé à Software Heritage) viendra
+  compléter cette référence.
+type: software
+title: "stase : agrégation statistique et évaluation de stationnarité"
+abstract: >-
+  Moteur d'agrégation de séries journalières hydroclimatiques en
+  variables temporelles (annuelles, saisonnières, mensuelles, par jour de
+  l'année) puis d'analyse de stationnarité : Mann-Kendall généralisé
+  (indépendance, autocorrélation d'ordre 1, dépendance à longue portée)
+  et pente de Sen. Port Python du paquet R EXstat, validé nombre à nombre
+  contre lui.
+authors:
+  - family-names: "Héraut"
+    given-names: "Louis"
+    email: "louis.heraut@inrae.fr"
+    affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
+  - family-names: "Dorchies"
+    given-names: "David"
+    email: "david.dorchies@inrae.fr"
+    affiliation: "INRAE, UMR G-Eau, Montpellier, France"
+  - family-names: "Sauquet"
+    given-names: "Éric"
+    email: "eric.sauquet@inrae.fr"
+    affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
+  - family-names: "Vidal"
+    given-names: "Jean-Philippe"
+    email: "jean-philippe.vidal@inrae.fr"
+    affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
+version: "0.5.0"
+date-released: "2026-07-22"
+repository-code: "https://github.com/lou-heraut/stase"
+license: "GPL-3.0-or-later"
+keywords:
+  - hydrologie
+  - séries temporelles
+  - Mann-Kendall
+  - pente de Sen
+  - stationnarité
+  - agrégation
