@@ -41,6 +41,16 @@ tags commencent à 0.5.0.
 4. **Le seul geste manuel régulier, c'est ce fichier.** Un changement
    qui mérite d'être retenu s'écrit sous `## Non publié`.
 
+## Non publié
+
+### Modifié
+
+- README : les capacités du moteur passent d'une liste à puces à des
+  exemples exécutés. `param_cols` y était absent alors que c'est la
+  capacité la plus récente, l'enchaînement des agrégations et la fenêtre
+  adaptative n'étaient que mentionnés. Chaque valeur affichée est celle
+  réellement produite, vérifiée par exécution.
+
 ## 0.5.0 (2026-07-22)
 
 ### Ajouté

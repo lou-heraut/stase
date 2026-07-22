@@ -28,21 +28,25 @@ import pandas as pd
 import stase
 
 # une chronique journalière : une colonne datetime, une colonne texte
-# (identifiant de série), une ou plusieurs colonnes numériques
-dates = pd.date_range("1990-01-01", "2020-12-31", freq="D")
-data = pd.DataFrame({
-    "date": dates,
-    "Q": np.random.default_rng(0).gamma(2, 5, len(dates)),
-    "id": "ma_station",
-})
+# (identifiant de série), une ou plusieurs colonnes numériques. Ici deux
+# séries synthétiques, l'une en baisse lente, l'autre stable.
+dates = pd.date_range("1970-01-01", "2020-12-31", freq="D")
+rng = np.random.default_rng(0)
+saison = 1 + 0.6 * np.cos(2 * np.pi * (dates.dayofyear.to_numpy() - 30) / 365)
+
+def serie(nom, facteur):
+    return pd.DataFrame({
+        "date": dates, "id": nom,
+        "Q": rng.gamma(2, 5, len(dates)) * saison * np.linspace(1.0, facteur, len(dates))})
+
+data = pd.concat([serie("A", 0.75), serie("B", 1.0)], ignore_index=True)
 
 # moyenne annuelle sur l'année hydrologique (départ 1er septembre)
 qa = stase.extract(data, func={"QA": (np.nanmean, "Q")},
                    time_step="year", sampling_period="09-01")
-
-# tendance : Mann-Kendall + pente de Sen, une ligne par série
-trendEX = stase.trend(qa)
-trendEX[trendEX.H == True]     # séries à tendance significative
+# id       date        QA
+#  A 1969-09-01  9.548228
+#  A 1970-09-01  9.257581
 ```
 
 Les colonnes sont reconnues par leur **type**, jamais par leur nom :
@@ -50,6 +54,71 @@ datetime pour les dates, texte pour l'identifiant de série, numérique
 pour les valeurs. Une colonne de dates en texte au format ISO
 `YYYY-MM-DD` est convertie automatiquement. Des identifiants numériques
 doivent être convertis en texte : `data["code"].astype(str)`.
+
+## Analyser la stationnarité
+
+```python
+tr = stase.trend(qa)
+tr[["id", "variable", "H", "p", "a", "a_relative"]]
+# id variable     H            p         a  a_relative
+#  A       QA  True 2.767571e-16 -0.055412   -0.632233
+#  B       QA False 8.189923e-01  0.001022    0.010210
+```
+
+Une ligne par série et par variable. `H` dit si la tendance est
+significative au seuil demandé, `a` est la pente de Sen dans l'unité de
+la variable et par an, `a_relative` la même en pourcentage de la moyenne.
+Trois hypothèses de dépendance temporelle : `INDE` (test standard),
+`AR1` (correction d'autocorrélation d'ordre 1) et `LTP` (persistance
+longue, coefficient de Hurst). Le LTP départage les ex aequo par tirage
+aléatoire : passer `seed=` pour un résultat rejouable.
+
+## Enchaîner les agrégations
+
+La sortie de `stase.extract` se réinjecte comme entrée. Le QMNA, minimum
+annuel des débits moyens mensuels, s'écrit ainsi en deux temps :
+
+```python
+qm = stase.extract(data, func={"QM": (np.nanmean, "Q")}, time_step="year-month")
+qmna = stase.extract(qm, func={"QMNA": (np.nanmin, "QM")}, time_step="year")
+# id       date     QMNA
+#  A 1970-01-01 4.317909
+#  A 1971-01-01 3.528193
+```
+
+## Fenêtre d'échantillonnage adaptative
+
+Une fenêtre annuelle fixe coupe parfois un événement en deux. `Adaptive`
+la décide série par série, ici en démarrant l'année au mois du maximum du
+régime, ce qui place l'étiage au milieu de la fenêtre :
+
+```python
+vcn = stase.extract(data, func={"VCN": (np.nanmin, "Q")}, time_step="year",
+                    sampling_period=stase.Adaptive(np.nanmax, "Q"))
+```
+
+## Colonnes de paramètre
+
+Une colonne fournie par l'appelant, constante par série, qui n'est ni
+l'axe temporel ni une mesure : un seuil réglementaire, une borne de
+période, une surface de bassin. Déclarée dans `param_cols`, elle est
+référençable par une fonction, exclue du comptage des lacunes, et
+**conservée en sortie** pour traverser un enchaînement :
+
+```python
+def jours_sous(Q, seuil):
+    return int(np.sum(np.asarray(Q, float) < float(np.asarray(seuil)[0])))
+
+d = data.assign(seuil=np.where(data["id"] == "A", 3.0, 4.0))
+n = stase.extract(d, func={"n_jours": (jours_sous, "Q", {"seuil": "seuil"})},
+                  time_step="year", param_cols=["seuil"])
+# id       date  n_jours  seuil
+#  A 1970-01-01       66    3.0
+#  A 1971-01-01       66    3.0
+```
+
+Chaque série reçoit sa propre valeur, et le seuil reste lisible à côté du
+résultat qu'il a produit.
 
 ## Capacités du moteur
 
@@ -59,11 +128,9 @@ doivent être convertis en texte : `data["code"].astype(str)`.
   plusieurs variables par appel via un dict. Un kwarg dont la valeur est
   un nom de colonne reçoit la colonne alignée sur le groupe (ex.
   `{"lim": "upLim"}`).
-- `sampling_period` : fenêtre fixe (`"09-01"`, `["05-01", "11-30"]`) ou
-  adaptative par série (`Adaptive(np.nanmax, "Q")` : l'année
-  hydrologique démarre au mois du maximum du régime).
-- La sortie de `stase.extract` se réinjecte comme entrée pour enchaîner
-  les agrégations (ex. QMNA : moyenne mensuelle puis min annuel).
+- `sampling_period` : fenêtre fixe (`"09-01"`) ou partielle
+  (`["05-01", "11-30"]`), qui restreint alors les données à cette
+  sous-période, ou adaptative par série.
 - Sorties dynamiques en `time_step="none"` : scalaire, colonne alignée
   (moyenne mobile) ou lignes libres (courbe des débits classés).
 - Filtres de lacunes : `max_na_pct` (taux de lacunes par échantillon,
@@ -73,10 +140,11 @@ doivent être convertis en texte : `data["code"].astype(str)`.
   matérialisée (pas de temps manquants insérés en NaN), et toutes les
   séries d'un appel doivent partager le même pas de temps (détection
   par série, erreur explicite sinon).
-- `stase.trend` : options `INDE` (test standard), `AR1` (correction
-  d'autocorrélation) et `LTP` (persistance longue, coefficient de
-  Hurst ; prévu pour des séries annuelles, passer `seed=` pour des
-  résultats reproductibles en présence d'ex-æquo).
+- `param_cols` : colonnes de paramètre constantes par série, conservées
+  en sortie.
+- `suffix` : une même fonction appliquée à plusieurs variantes d'une
+  colonne en un appel, la résolution se faisant référence par référence
+  (une série partagée reste partagée, seule la colonne qui varie éclate).
 
 Quand il n'y a rien à retourner (entrée vide, `period` excluant toutes
 les données), la sortie est un DataFrame de zéro ligne avec les
