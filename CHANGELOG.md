@@ -10,10 +10,9 @@ Rien n'est recopié ici : une information recopiée finit par mentir à un
 des deux endroits.
 
 **Numérotation.** SemVer avec la convention du 0.x : tant que le premier
-chiffre vaut 0, un changement incompatible incrémente le **deuxième**
-(0.4 vers 0.5), le reste incrémente le troisième. Chaque version est
-étiquetée dans git (`vX.Y.Z`) : un numéro qui ne correspond à aucun tag
-ne désigne rien d'installable, donc rien d'épinglable.
+chiffre vaut 0, un changement incompatible incrémente le deuxième, le
+reste incrémente le troisième. Les numéros servent à la publication ; au
+quotidien, c'est le commit qui identifie un état (cf. ci-dessous).
 
 Rattrapage du 2026-07-22 : les jalons 0.2.0 et 0.3.0 avaient été annoncés
 dans des messages de commit sans que `pyproject.toml` soit touché, et le
@@ -23,32 +22,19 @@ rétroactivement : un tag `v0.2.0` désignerait un arbre dont le
 `pyproject.toml` annonce 0.1.0, ce qui serait un deuxième mensonge. Les
 tags commencent à 0.5.0.
 
-## Publier une version
+## Versions, en trois phrases
 
-Au quotidien, on commite et on pousse sur `main` : ni bump, ni tag. Une
-modification notable s'écrit sous un titre `## Non publié` en haut de ce
-fichier.
-
-On pose une version quand on veut **figer un état dont autre chose va
-dépendre** : un déploiement de card-api (qui épingle des tags), une
-publication, ou quelqu'un qui installe le paquet.
-
-1. choisir le numéro : un changement qui **casse** l'existant (une sortie
-   change, un paramètre disparaît) incrémente le deuxième chiffre
-   (`0.2.0` vers `0.3.0`) ; un ajout ou un correctif incrémente le
-   troisième (`0.2.0` vers `0.2.1`) ;
-2. écrire ce numéro dans `pyproject.toml` ;
-3. renommer le titre `## Non publié` en `## 0.3.0 (AAAA-MM-JJ)` ;
-4. puis :
-
-```bash
-git commit -am "stase 0.3.0 : ce que ça change"
-git tag -a v0.3.0 -m "stase 0.3.0 : résumé en une ligne"
-git push && git push --tags
-```
-
-Un tag poussé ne se déplace plus : si le numéro était mauvais, on en pose
-un autre. C'est ce qui permet à `card et card-api` de s'y fier.
+1. **Au quotidien, on ne touche à aucun numéro.** La production suit
+   `main` : une correction de fiche part en ligne au prochain
+   `make update`, sans négociation.
+2. **Ce qui trace, c'est le commit, et c'est automatique.** Chaque
+   réponse du service dit le commit exact de card et de stase qui l'a
+   produite, et chaque variable porte la version de sa fiche. Rien à
+   faire, rien à oublier.
+3. **Le seul geste manuel, c'est ce fichier.** Un changement qui mérite
+   d'être retenu s'écrit sous `## Non publié`. Un numéro de version ne se
+   pose que le jour d'une publication (PyPI), ce qui n'est pas encore
+   arrivé.
 
 ## 0.5.0 (2026-07-22)
 
