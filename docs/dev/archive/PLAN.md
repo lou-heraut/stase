@@ -1,3 +1,10 @@
+> **Statut : archive.** Document d'époque, non maintenu, conservé pour
+> retracer l'audit du 2026-07-12 et ses correctifs. Clôturé le
+> 2026-07-16, dépassé par la revue critique menée avant le premier
+> déploiement (note de clôture en fin de fichier). Les chemins qu'il cite
+> sont ceux d'alors. État courant : `CHANGELOG.md` à la racine du dépôt,
+> divergences dans `../ORIGINE_R.md`.
+
 # PLAN — Audit et améliorations de stase (2026-07-12)
 
 Audit du package stase (port Python d'EXstat, moteur de card) réalisé le

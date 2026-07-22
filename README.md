@@ -85,7 +85,7 @@ traitement spécial du cas vide.
 
 Pour des variables hydroclimatiques prêtes à l'emploi (étiages, crues,
 saisonnalité...), le package [card](https://github.com/lou-heraut/card)
-fournit 226 fiches paramétrées exécutées par stase.
+fournit un corpus de fiches paramétrées exécutées par stase.
 
 ## Origine
 
@@ -99,9 +99,9 @@ dans le fichier AUTHORS.
 ## Développement
 
 ```bash
-pip install -e . && pytest      # 106 tests, goldens inclus dans tests/data/
+pip install -e . && pytest      # 130 tests, goldens inclus dans tests/data/
 ```
 
 CI : `.github/workflows/tests.yml` (matrice Python × pandas, ruff).
-Benchmark données réelles : `benchmarks/bench_rrse.py`. Suivi du plan
-d'amélioration : `docs/dev/PLAN.md`.
+Benchmark données réelles : `benchmarks/bench_rrse.py`. Ce qui a changé
+et quand : [CHANGELOG.md](CHANGELOG.md).

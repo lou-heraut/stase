@@ -1,3 +1,8 @@
+> **Statut : norme en vigueur.** Origine R du moteur, validation croisée
+> et divergences intentionnelles, celles qu'il ne faut jamais
+> « corriger ». Le fichier de même nom dans card traite du corpus de
+> fiches. Journal daté des livraisons : `CHANGELOG.md` à la racine.
+
 # Origine : conversion depuis le package R EXstat
 
 stase est le port Python du package R [EXstat](https://github.com/lou-heraut/EXstat)
@@ -12,8 +17,9 @@ et les références de cette validation sont commitées dans `tests/data/`
 
 L'historique détaillé de la conversion (choix d'implémentation,
 optimisations, phases de validation) est conservé dans
-[CONVERSION_R.md](CONVERSION_R.md), et le harnais de validation croisée
-d'origine dans [harnais_R/](harnais_R/).
+[archive/CONVERSION_R.md](archive/CONVERSION_R.md), et le harnais de
+validation croisée d'origine dans
+[archive/harnais_R/](archive/harnais_R/).
 
 ## Divergences intentionnelles avec le R
 

@@ -1,3 +1,7 @@
+> **Statut : norme en vigueur.** Table de correspondance des noms R vers
+> Python (fonctions, paramètres, colonnes de sortie). Elle fait foi ;
+> tout nouveau renommage passe par l'utilisateur.
+
 # Renommages Python (2026-07-12)
 
 Nettoyage validé par l'utilisateur : renommage sec des paramètres (pas
@@ -37,7 +41,7 @@ d'entrée (le nom imposé « Date » était considéré comme un bug).
 | MK_level | level |
 | time_dependency_option | dependency (valeurs INDE/AR1/LTP inchangées) |
 | to_normalise | relative |
-| metaEX | meta (colonnes attendues : variable_en, relative) |
+| metaEX | retiré en 0.4.0 : le caractère relatif se passe par `relative={variable: bool}` |
 | extreme_take_not_signif_into_account | extremes_include_non_significant |
 | extreme_take_only_series | extremes_series |
 | extreme_by_suffix | extremes_by_suffix |

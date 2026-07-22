@@ -14,15 +14,24 @@ Repos liés (séparation actée le 2026-07-15 : les repos R restent
 travail IA se fait dans stase et card) :
 - `EXstat_project/EXstat/` — code R d'origine, en maintenance
   (ne pas modifier, ne pas y ajouter de fichiers IA)
-- `CARD_project/card/` — consommateur de stase (sa docs/dev/ROADMAP.md
-  documente la refonte commune) ; `CARD_project/CARD-R/` — R d'origine,
+- `CARD_project/card/` : consommateur de stase (son CHANGELOG.md trace
+  ce qui a changé de son côté) ; `CARD_project/CARD-R/` : R d'origine,
   même statut que EXstat
-- `EXstat_project/EXstat_Claude/` — ancien dossier de travail de la
-  conversion (pas un repo git), désormais archivable : son CLAUDE.md
-  historique est copié dans `docs/dev/CONVERSION_R.md` et le harnais de
-  validation croisée dans `docs/dev/harnais_R/` ; ses CSVs de référence
-  complets (`EXstat_py/ref_output/`, `ref_trend/`) sont régénérables via
-  ces scripts
+- `EXstat_project/EXstat_Claude/` : ancien dossier de travail de la
+  conversion (pas un repo git), désormais archivable. Son CLAUDE.md
+  historique est copié dans `docs/dev/archive/CONVERSION_R.md` et le
+  harnais de validation croisée dans `docs/dev/archive/harnais_R/` ; ses
+  CSVs de référence complets (`EXstat_py/ref_output/`, `ref_trend/`) se
+  régénèrent avec ces scripts
+
+Où lire quoi. Un rôle par fichier, chacun l'annonce dans un bandeau de
+statut en tête ; ne jamais recopier d'un fichier à l'autre, renvoyer.
+- `CHANGELOG.md` (racine) : ce qui a changé, quand, et où lire le détail.
+- docs/dev/, normes en vigueur : `ORIGINE_R.md` (origine R, validation,
+  divergences à ne jamais « corriger »), `RENAMING_PY.md` (noms R vers
+  Python).
+- docs/dev/archive/ : documents d'époque, non maintenus (`PLAN.md`,
+  `CONVERSION_R.md`, `harnais_R/`).
 
 ## Structure
 
@@ -39,8 +48,9 @@ tests/
                              #   résolutions mixtes, Sen sur années absentes
   test_tools.py              # 13 goldens MK R + cas limites figés
   test_trend.py              # 5 goldens process_trend R + cas limites
+  test_suffix.py             # résolution du suffixe référence par référence
+  test_params.py             # rôle param_cols (colonnes de paramètre)
   data/                      # CSVs de référence R (repo auto-suffisant)
-docs/dev/PLAN.md  # audit 2026-07-12 + plan d'amélioration (suivi à jour)
 docs/img/         # figures du README (déposées manuellement)
 ```
 
@@ -50,8 +60,8 @@ docs/img/         # figures du README (déposées manuellement)
    modification sans accord explicite de l'utilisateur. Deux exceptions
    ont été validées et faites le 2026-07-12 : rng/seed LTP
    (reproductibilité des ex-æquo) et variance LTP par blocs (mémoire
-   bornée) — prouvées par tests d'équivalence, cf. docs/dev/PLAN.md
-   phase 3. Interactions toujours permises : tests goldens,
+   bornée), toutes deux prouvées par tests d'équivalence dans
+   `tests/test_tools.py`. Interactions toujours permises : tests goldens,
    documentation des limites, correction d'une vraie divergence de
    résultat avec R (aucune connue).
 2. **Détection des colonnes par type, jamais par nom.** datetime → date,
@@ -112,5 +122,5 @@ dépendance déclarée pandas>=2.2 (include_groups, observed=).
   max_na_pct comparé au taux exact, grille matérialisée, bug yearday R
   non reproduit, précision MLE Hurst) : documentées dans
   docs/dev/ORIGINE_R.md, ne pas « corriger ». Le détail historique
-  complet de la conversion est dans `docs/dev/CONVERSION_R.md`
+  complet de la conversion est dans `docs/dev/archive/CONVERSION_R.md`
   (archive de l'ancien `EXstat_Claude/CLAUDE.md`).
