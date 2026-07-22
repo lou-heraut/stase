@@ -9,13 +9,21 @@ Chaque entrée dit ce qui a changé et renvoie au document qui l'explique.
 Rien n'est recopié ici : une information recopiée finit par mentir à un
 des deux endroits.
 
-**Note sur les numéros.** Le dépôt n'est pas encore étiqueté (pas de tag
-git, installation depuis GitHub). Les jalons 0.2.0 et 0.3.0 ont été
-annoncés dans les messages de commit sans que `pyproject.toml` soit
-touché : le numéro n'a rattrapé son retard qu'au 0.4.0, le 2026-07-20.
-Les sections ci-dessous portent la date réelle du travail.
+**Numérotation.** SemVer avec la convention du 0.x : tant que le premier
+chiffre vaut 0, un changement incompatible incrémente le **deuxième**
+(0.4 vers 0.5), le reste incrémente le troisième. Chaque version est
+étiquetée dans git (`vX.Y.Z`) : un numéro qui ne correspond à aucun tag
+ne désigne rien d'installable, donc rien d'épinglable.
 
-## Non publié
+Rattrapage du 2026-07-22 : les jalons 0.2.0 et 0.3.0 avaient été annoncés
+dans des messages de commit sans que `pyproject.toml` soit touché, et le
+numéro n'avait rattrapé son retard qu'au 0.4.0. Les sections ci-dessous
+portent la date réelle du travail. Elles ne sont **pas** étiquetées
+rétroactivement : un tag `v0.2.0` désignerait un arbre dont le
+`pyproject.toml` annonce 0.1.0, ce qui serait un deuxième mensonge. Les
+tags commencent à 0.5.0.
+
+## 0.5.0 (2026-07-22)
 
 ### Ajouté
 
