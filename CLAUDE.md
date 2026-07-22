@@ -82,6 +82,13 @@ docs/img/         # figures du README (déposées manuellement)
    traitent par de meilleurs messages d'erreur.
 3. **Wording générique.** Jamais « station » dans les messages, la doc ou
    le code : dire « série ». stase est agnostique du domaine.
+4. **La version du paquet ne bouge pas à chaque commit.** On la bump dans
+   `pyproject.toml` et on l'étiquette (`vX.Y.Z`) seulement pour figer un
+   état dont card ou card-api va dépendre. Recette : section « Publier
+   une version » du CHANGELOG. **Déclencheur** : dès qu'un changement du
+   moteur est nécessaire à card (comme `param_cols` l'a été), il faut une
+   version taguée ET remonter la contrainte `stase>=` dans le pyproject
+   de card, sinon la contrainte ment. Le proposer soi-même.
 
 ## API
 
