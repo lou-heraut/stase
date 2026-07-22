@@ -6,3 +6,6 @@ dist/
 .python_env/
 .pytest_cache/
 *~
+# brouillon personnel de l'utilisateur : hors git, et Claude ne l'ouvre pas
+note.txt
+notes.txt
