@@ -37,7 +37,8 @@ saison = 1 + 0.6 * np.cos(2 * np.pi * (dates.dayofyear.to_numpy() - 30) / 365)
 def serie(nom, facteur):
     return pd.DataFrame({
         "date": dates, "id": nom,
-        "Q": rng.gamma(2, 5, len(dates)) * saison * np.linspace(1.0, facteur, len(dates))})
+        "Q": (rng.gamma(2, 5, len(dates)) * saison
+              * np.linspace(1.0, facteur, len(dates)))})
 
 data = pd.concat([serie("A", 0.75), serie("B", 1.0)], ignore_index=True)
 
