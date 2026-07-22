@@ -82,13 +82,13 @@ docs/img/         # figures du README (déposées manuellement)
    traitent par de meilleurs messages d'erreur.
 3. **Wording générique.** Jamais « station » dans les messages, la doc ou
    le code : dire « série ». stase est agnostique du domaine.
-4. **La version du paquet ne sert qu'à publier**, on n'y touche pas au
-   quotidien. Le seul geste à ne pas oublier est l'entrée `## Non publié`
-   du CHANGELOG quand un changement mérite d'être retenu. Une exception :
-   si un changement du moteur devient nécessaire à card (comme
-   `param_cols` l'a été), bump ici ET remontée de la contrainte `stase>=`
-   dans le pyproject de card, sinon la contrainte ment. Le proposer
-   soi-même.
+4. **Versions.** On n'y touche pas au quotidien. Chaînage à ne pas
+   rater, rappelé ici exprès : une modif notable se note sous
+   `## Non publié` du CHANGELOG ; publier se fait par
+   `scripts/set_version.py`, jamais à la main ; et si un changement du
+   moteur devient nécessaire à card (comme `param_cols` l'a été), il faut
+   bumper ICI **et** remonter la contrainte `stase>=` dans le pyproject
+   de card, sinon elle ment. Détail : « Versions et citation » plus bas.
 
 ## API
 
@@ -113,6 +113,29 @@ cd ../../CARD_project/card && .python_env/bin/python -m pytest
 
 Environnement : `.python_env/` (pandas 3.0.3, numpy 2.5.1) ;
 dépendance déclarée pandas>=2.2 (include_groups, observed=).
+
+## Versions et citation
+
+Doctrine complète : « Versions, en quatre phrases », en tête de
+`CHANGELOG.md`. Ce qu'il ne faut pas rater :
+
+- **Au quotidien : rien.** La production suit `main`, le service publie
+  le commit et le SWHID de card et de stase dans chaque réponse. Le seul
+  geste régulier est l'entrée `## Non publié` du CHANGELOG. **Le
+  proposer soi-même**, l'utilisateur ne le demandera pas.
+- **Publier une version** (rare : PyPI, dépôt citable) :
+  `python scripts/set_version.py 0.3.0` accorde `pyproject.toml`,
+  `CITATION.cff` et `codemeta.json`. Ne JAMAIS y écrire un numéro à la
+  main : `tests/test_citation.py` refuse le désaccord. Puis section de
+  CHANGELOG, commit, `git tag -a vX.Y.Z`, `git push --tags`.
+- **SWHID** : `swh:1:rev:<hash du commit>` EST l'identifiant Software
+  Heritage d'une révision git, calculable sans aucun appel d'API. Il ne
+  résout que si le dépôt est archivé : fait le 2026-07-22 pour les trois,
+  et SWH revisite tout seul ensuite. Rien à refaire par version.
+- **Exception** : si un changement du moteur devient nécessaire à card
+  (comme `param_cols` l'a été), bump ici ET remontée de la contrainte
+  `stase>=` dans le pyproject de card, sinon la contrainte ment.
+
 
 ## Points d'architecture à connaître
 

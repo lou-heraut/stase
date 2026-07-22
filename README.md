@@ -87,6 +87,29 @@ Pour des variables hydroclimatiques prêtes à l'emploi (étiages, crues,
 saisonnalité...), le package [card](https://github.com/lou-heraut/card)
 fournit un corpus de fiches paramétrées exécutées par stase.
 
+## Citer
+
+Ce moteur est un logiciel scientifique : merci de le citer si vous
+l'utilisez dans un travail publié.
+
+```
+Héraut L., Dorchies D., Sauquet É., Vidal J.-P. (2026). stase :
+agrégation statistique et évaluation de stationnarité (version 0.5.0).
+Software Heritage : swh:1:rev:<commit>
+https://github.com/lou-heraut/stase
+```
+
+Le dépôt est archivé sur [Software
+Heritage](https://archive.softwareheritage.org/browse/origin/directory/?origin_url=https://github.com/lou-heraut/stase),
+qui donne un identifiant pérenne par révision. Métadonnées lisibles par
+machine : `CITATION.cff` et `codemeta.json` à la racine ; GitHub propose
+d'ailleurs « Cite this repository » à partir du premier.
+
+Si vous citez un résultat produit par le service
+[card-api](https://github.com/lou-heraut/card-api), chaque réponse porte
+déjà le commit et le SWHID exacts du code qui l'a calculé, ainsi que la
+version de chaque fiche employée : reprenez-les plutôt que ce modèle.
+
 ## Origine
 
 stase est le port Python du package R
@@ -99,7 +122,7 @@ dans le fichier AUTHORS.
 ## Développement
 
 ```bash
-pip install -e . && pytest      # 130 tests, goldens inclus dans tests/data/
+pip install -e . && pytest      # 131 tests, goldens inclus dans tests/data/
 ```
 
 CI : `.github/workflows/tests.yml` (matrice Python × pandas, ruff).

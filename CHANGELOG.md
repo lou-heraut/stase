@@ -22,19 +22,24 @@ rétroactivement : un tag `v0.2.0` désignerait un arbre dont le
 `pyproject.toml` annonce 0.1.0, ce qui serait un deuxième mensonge. Les
 tags commencent à 0.5.0.
 
-## Versions, en trois phrases
+## Versions, en quatre phrases
 
 1. **Au quotidien, on ne touche à aucun numéro.** La production suit
    `main` : une correction de fiche part en ligne au prochain
    `make update`, sans négociation.
 2. **Ce qui trace, c'est le commit, et c'est automatique.** Chaque
    réponse du service dit le commit exact de card et de stase qui l'a
-   produite, et chaque variable porte la version de sa fiche. Rien à
-   faire, rien à oublier.
-3. **Le seul geste manuel, c'est ce fichier.** Un changement qui mérite
-   d'être retenu s'écrit sous `## Non publié`. Un numéro de version ne se
-   pose que le jour d'une publication (PyPI), ce qui n'est pas encore
-   arrivé.
+   produite, son identifiant pérenne Software Heritage
+   (`swh:1:rev:<commit>`, qui résout puisque les trois dépôts y sont
+   archivés depuis le 2026-07-22), et chaque variable porte la version de
+   sa fiche. Rien à faire, rien à oublier.
+3. **Publier une version reste rare, et tient en une commande.**
+   `python scripts/set_version.py 0.3.0` accorde `pyproject.toml`,
+   `CITATION.cff` et `codemeta.json`, les trois seuls endroits où le
+   numéro est écrit. Ne jamais les éditer à la main :
+   `tests/test_citation.py` refuse le désaccord.
+4. **Le seul geste manuel régulier, c'est ce fichier.** Un changement
+   qui mérite d'être retenu s'écrit sous `## Non publié`.
 
 ## 0.5.0 (2026-07-22)
 
