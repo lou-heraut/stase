@@ -6,7 +6,7 @@ Usage : .python_env/bin/python benchmarks/bench_rrse.py
 Référence (2026-07-12, après optimisations tri/doublons, fan-out aligné,
 argmax positionnel Cython) :
     QA 1.8s · QJXA 1.7s · tQJXA 3.0s · QMNA 2.5s · VCN10 2.9s ·
-    4 vars 2.7s · trend 0.2s — total ~14.9s (avant : ~24.9s)
+    4 vars 2.7s · trend 0.2s, total ~14.9s (avant : ~24.9s)
 """
 import sys
 import time

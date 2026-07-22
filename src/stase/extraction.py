@@ -16,7 +16,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.
 
 """
-process_extraction — Python implementation of R/process_extraction.R
+process_extraction : Python implementation of R/process_extraction.R
 
 Optimisations vs implémentation naïve :
   - Comptage NA : size() - count() (C-level pandas), pas de boucle Python par groupe
@@ -70,12 +70,12 @@ class Adaptive:
 # ligne de chaque groupe, NaN ailleurs). À l'appel suivant, si les colonnes
 # utilisées sont toutes creuses, les lignes de remplissage sont compactées
 # afin que NApct mesure la complétude réelle (en R, ces NaN de construction
-# sont invisibles au comptage via is.na_not_nan — distinction NA/NaN
+# sont invisibles au comptage via is.na_not_nan : distinction NA/NaN
 # impossible en pandas).
 _SPARSE_ATTR = "stase_sparse"
 
 # Clé DataFrame.attrs interne : sortie 'transform' de time_step 'none'
-# dont l'index correspond aux positions des lignes d'entrée — autorise le
+# dont l'index correspond aux positions des lignes d'entrée : autorise le
 # fan-out keep='all' par simple alignement d'index au lieu d'un merge.
 _ALIGNED_ATTR = "stase_row_aligned"
 
@@ -89,9 +89,9 @@ _ALIGNED_ATTR = "stase_row_aligned"
 # méthodes pandas. Absents intentionnels :
 # - np.mean, np.median, builtins max/min/sum... : sémantique stricte ou
 #   dépendante de l'ordre face aux NaN, et np.median ne dispatche pas
-#   vers pandas — un alias changerait la valeur sur les groupes à NaN ;
+#   vers pandas : un alias changerait la valeur sur les groupes à NaN ;
 # - np.nanstd / np.std / np.var : pandas "std"/"var" sont en ddof=1,
-#   numpy en ddof=0 — l'alias changerait la valeur ;
+#   numpy en ddof=0 : l'alias changerait la valeur ;
 # - np.argmax / np.argmin : pandas.Series.idxmax() retourne le LABEL
 #   d'index, pas la position 0-based (cf. _POSITIONAL_AGGS).
 # Groupe sans valeur valide → NaN partout (invariant moteur, y compris
@@ -317,7 +317,7 @@ def _validate_mmdd(s) -> str:
         raise ValueError(msg) from None
     if not (1 <= m <= 12 and 1 <= d <= 31):
         raise ValueError(
-            f"sampling_period invalide : {s!r} — mois hors [01, 12] "
+            f"sampling_period invalide : {s!r}, mois hors [01, 12] "
             "ou jour hors [01, 31]."
         )
     return s
@@ -419,7 +419,7 @@ def _build_season_map(seasons: list[str]) -> tuple[list[str], list[int]]:
 
 
 def _circular_mean_months(months: np.ndarray) -> float:
-    """Circular mean of fractional month values [0, 12) — equivalent to CircStats::circ.mean in R."""
+    """Circular mean of fractional month values [0, 12), equivalent to CircStats::circ.mean in R."""
     valid = months[~np.isnan(months)]
     if len(valid) == 0:
         return 0.0
@@ -445,7 +445,7 @@ def _apply_is_date(
       3. Per-series circular mean of month_frac = (yday_raw+1) / (365.25/12)
       4. Values > mean+6 months → subtract nDay (leap-aware, based on _hy label year)
          Values < mean-6 months → add nDay
-    Output _value may be negative or >365 — this is intentional for trend analysis.
+    Output _value may be negative or >365 : this is intentional for trend analysis.
     """
     min_dates = (
         data_with_hy.groupby([id_col, "_hy"], observed=True)[date_col].min()
@@ -606,7 +606,7 @@ def _window_nmonths(sp_start: str, sp_end: str, dt2add: int) -> int:
 
 
 # Argmax/argmin positionnels par groupe en Cython pur.
-# np.nanargmax(groupe) = position 0-based du max en ignorant les NaN —
+# np.nanargmax(groupe) = position 0-based du max en ignorant les NaN,
 # reproductible avec idxmax (label du max, skipna, premier ex-æquo comme
 # numpy) + cumcount (position dans le groupe). np.argmax/np.argmin ne sont
 # PAS mappés : leur sémantique NaN diffère (argmax voit NaN comme max).
@@ -619,7 +619,7 @@ _POSITIONAL_AGGS: dict = {
 def _positional_agg(data, g, grp_keys, primary_col, method, skip_na, out_index):
     """Position 0-based de l'extremum par groupe, sans appel Python par
     groupe : cumcount + idxmax/idxmin (Cython). Équivalent exact de
-    .agg(np.nanargmax) / .agg(np.nanargmin) — vérifié par test dédié."""
+    .agg(np.nanargmax) / .agg(np.nanargmin) : vérifié par test dédié."""
     if skip_na:
         frame = data.loc[data[primary_col].notna()]
         gg = frame.groupby(grp_keys, sort=True, observed=True)
@@ -663,7 +663,7 @@ def _groupby_agg(
 
     col_names : colonne unique (str) ou liste de colonnes (multi-colonnes).
     - Mono-colonne : chemin Cython si funct dans _PANDAS_AGG_ALIASES et pas de kwargs.
-    - Multi-colonnes : groupby.apply — funct(*[Series_col1, ...], **kwargs).
+    - Multi-colonnes : groupby.apply, funct(*[Series_col1, ...], **kwargs).
       Le comptage NA (_nPresent, _nNA) est basé sur la première colonne.
 
     Retourne un DataFrame [*grp_keys, _nPresent, _nNA, _value].
@@ -723,7 +723,7 @@ def _groupby_agg(
                 values = g[primary_col].agg(_agg_safe).rename("_value")
     else:
         # Chemin multi-colonnes : groupby.apply
-        # funct reçoit (*Series_par_colonne, **kwargs) — une Series par colonne listée
+        # funct reçoit (*Series_par_colonne, **kwargs), une Series par colonne listée
         _cols = col_names
         _fn   = funct
         _kw   = funct_kwargs
@@ -740,7 +740,7 @@ def _groupby_agg(
         try:
             values = g.apply(_multi_apply, include_groups=False).rename("_value")
         except TypeError:
-            # pandas < 2.2 : pas d'include_groups — les clés de groupe sont
+            # pandas < 2.2 : pas d'include_groups, les clés de groupe sont
             # incluses dans sub_df mais _multi_apply n'accède qu'à _cols
             values = g.apply(_multi_apply).rename("_value")
 
@@ -755,7 +755,7 @@ def _napct_vec(n_present: np.ndarray, n_na: np.ndarray, n_expected: np.ndarray) 
     """Calcule NApct vectoriellement (pas de apply/loop Python).
 
     Valeur exacte, non arrondie : le seuil max_na_pct se compare à la
-    valeur exacte (R comparait la valeur arrondie — 3.04 % passait un
+    valeur exacte (R comparait la valeur arrondie, 3.04 % passait un
     seuil de 3, divergence assumée, cf. docs/dev/ORIGINE_R.md).
     L'arrondi à 1 décimale n'existe que dans la colonne de sortie,
     via _napct_out."""
@@ -1063,7 +1063,7 @@ def _apply_expand(
     value_names: list[str],
     compressed: bool,
 ) -> dict[str, pd.DataFrame]:
-    """Éclate le DataFrame en dict {name: DataFrame} — un par variable extraite."""
+    """Éclate le DataFrame en dict {name: DataFrame}, un par variable extraite."""
     if not isinstance(result, pd.DataFrame):
         return result
 
@@ -1233,7 +1233,7 @@ def process_extraction(
             _p0, _p1 = pd.Timestamp(period[0]), pd.Timestamp(period[1])
         except Exception as _exc:
             raise ValueError(
-                f"period invalide — impossible de convertir en dates : {_exc}"
+                f"period invalide, impossible de convertir en dates : {_exc}"
             ) from _exc
         if _p0 > _p1:
             raise ValueError(
@@ -1264,7 +1264,7 @@ def process_extraction(
         compress = False
 
     # keep peut être une liste de colonnes à conserver en sortie
-    # (sélection finale, sans fan-out — équivalent R keep=c("QJC10"))
+    # (sélection finale, sans fan-out : équivalent R keep=c("QJC10"))
     keep_cols: list | None = None
     if isinstance(keep, (list, tuple)):
         keep_cols = [str(c) for c in keep]
@@ -1364,13 +1364,13 @@ def process_extraction(
         data["_id"] = "time serie"
         id_col = "_id"
 
-    # Convertir la colonne ID en Categorical si nécessaire — accélère groupby + tri
+    # Convertir la colonne ID en Categorical si nécessaire, accélère groupby + tri
     if not isinstance(data[id_col].dtype, pd.CategoricalDtype):
         data[id_col] = data[id_col].astype("category")
 
     # Tri (id, date) dès maintenant : requis par l'extraction de toute
     # façon (les filtres en aval préservent l'ordre), et il rend le
-    # contrôle des doublons vectoriel — comparaison de voisins au lieu
+    # contrôle des doublons vectoriel : comparaison de voisins au lieu
     # d'un hachage complet du tableau (~2× moins cher au total).
     # Le tri multi-clés pandas est stable : « première occurrence » garde
     # le même sens qu'avant pour rm_duplicates.
@@ -1502,7 +1502,7 @@ def process_extraction(
                                             verbose=verbose)
 
     # Compaction des colonnes creuses issues d'un fan-out keep='all' d'un
-    # appel précédent (cf. _SPARSE_ATTR) — uniquement si toutes les
+    # appel précédent (cf. _SPARSE_ATTR) : uniquement si toutes les
     # colonnes utilisées sont creuses et qu'on ne refait pas de fan-out
     sparse_in = set(data.attrs.get(_SPARSE_ATTR, []))
     if sparse_in and keep != "all":
@@ -1801,7 +1801,7 @@ def process_extraction(
 
 
 # ---------------------------------------------------------------------------
-# NAyear_lim — troncature des séries avec lacunes consécutives trop longues
+# NAyear_lim : troncature des séries avec lacunes consécutives trop longues
 # ---------------------------------------------------------------------------
 
 def _missing_year_hide(values: np.ndarray, dates: np.ndarray, nayear_lim: float) -> np.ndarray:
@@ -1867,7 +1867,7 @@ def _apply_nayear_lim(data: pd.DataFrame, id_col: str, date_col: str,
 
 
 # ---------------------------------------------------------------------------
-# keep="all" — fan-out vers lignes d'origine
+# keep="all" : fan-out vers lignes d'origine
 # ---------------------------------------------------------------------------
 
 def _apply_keep_all(data_for_keep, data_with_keys, result, time_step, id_col,
@@ -1897,7 +1897,7 @@ def _apply_keep_all(data_for_keep, data_with_keys, result, time_step, id_col,
             )
         else:
             # sortie scalaire : toutes les lignes de chaque ID reçoivent
-            # la valeur agrégée — map (clés uniques) plutôt que merge
+            # la valeur agrégée : map (clés uniques) plutôt que merge
             base = data_for_keep.copy()
             for col in agg_cols:
                 mapping = pd.Series(result[col].to_numpy(),
@@ -2178,7 +2178,7 @@ def _extract_season(data, id_col, date_col, col_name, funct, funct_kwargs, skip_
               .drop_duplicates([id_col, "_season_name"]))
     ext = ext.merge(sm_map, on=[id_col, "_season_name"], how="left")
 
-    # year_ref = year(minSampleStart) — même logique que R
+    # year_ref = year(minSampleStart) : même logique que R
     # minSampleStart = premier jour de la saison contenant la première date de la série
     min_dates = data.groupby(id_col, observed=True)[date_col].min()
     mm_min = min_dates.dt.month.to_numpy()
@@ -2443,7 +2443,7 @@ def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
             warnings.warn(
                 f"sampling_period adaptatif : repli sur le mois par défaut "
                 f"'{spec.default}' pour {len(fallback_ids)} série(s) "
-                f"({_preview}) — série vide, toute-NaN, ou funct ne "
+                f"({_preview}) : série vide, toute-NaN, ou funct ne "
                 "retournant pas une des moyennes mensuelles "
                 "(utilisez p. ex. np.nanmax / np.nanmin).",
                 UserWarning, stacklevel=3,

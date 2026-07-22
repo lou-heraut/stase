@@ -1,5 +1,5 @@
 """
-compare_trend.py — Cross-validate tools.py against R's tools.R
+compare_trend.py : Cross-validate tools.py against R's tools.R
 
 Run from project root:
     EXstat_py/python_env/bin/python3 EXstat_py/compare_trend.py

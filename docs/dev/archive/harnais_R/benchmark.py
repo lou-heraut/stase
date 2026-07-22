@@ -1,5 +1,5 @@
 """
-Benchmark process_extraction — 100 stations x 50 ans (~1.83M lignes)
+Benchmark process_extraction : 100 stations x 50 ans (~1.83M lignes)
 """
 import time
 import numpy as np

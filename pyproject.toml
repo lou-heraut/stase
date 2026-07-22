@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stase"
 version = "0.4.0"
-description = "STASE — STatistical Aggregation & Stationarity Evaluation for daily hydroclimatic time series (Python port of the EXstat R package)"
+description = "STASE : STatistical Aggregation & Stationarity Evaluation for daily hydroclimatic time series (Python port of the EXstat R package)"
 license = {text = "GPL-3.0-or-later"}
 authors = [
     {name = "Louis Héraut", email = "louis.heraut@inrae.fr"},

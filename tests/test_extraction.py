@@ -153,7 +153,7 @@ def test_date_column_alias():
     def last_ts(x, dates=None):
         return float(pd.Series(dates).dt.dayofyear.iloc[-1])
 
-    # "date" en minuscule dans le tuple, colonne réelle "date" — puis test
+    # "date" en minuscule dans le tuple, colonne réelle "date", puis test
     # de l'alias sur une colonne "Date" (sortie EXstat standard)
     r = process_extraction(data, func={"t": (last_ts, "Q",
                                               {"dates": "date"})},
@@ -184,7 +184,7 @@ def test_sparse_fanout_then_compact():
                             time_step="year-month", keep="all")
     assert p1.attrs.get(_SPARSE_ATTR) == ["QM"]
     assert p1.QM.isna().mean() > 0.9
-    # P2 : agrégation annuelle sur la colonne creuse — sans compaction,
+    # P2 : agrégation annuelle sur la colonne creuse, sans compaction,
     # NApct serait ~97 % et tout serait filtré
     p2 = process_extraction(p1, func={"QMNA": (np.nanmin, "QM")},
                             time_step="year", sampling_period="01-01",

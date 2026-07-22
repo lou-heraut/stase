@@ -1,4 +1,4 @@
-"""Tests du cœur statistique tools.py — goldens R + cas limites.
+"""Tests du cœur statistique tools.py : goldens R + cas limites.
 
 Le code de tools.py est GELÉ (port validé contre tools.R) : ces tests
 figent son comportement, ils ne le redéfinissent pas.
@@ -8,7 +8,7 @@ le package R EXstat (scripts compare_trend.R d'EXstat_Claude).
 Tolérances héritées de la validation d'origine :
   - INDE / AR1 : 1e-10 (concordance exacte avec R)
   - LTP : 3e-3 (R optimise le coefficient de Hurst avec tol≈1.2e-4,
-    scipy avec xatol≈1.5e-8 — divergence de précision documentée ;
+    scipy avec xatol≈1.5e-8 : divergence de précision documentée ;
     la validation d'origine utilisait 2e-3, dépassé de 4e-5 sur un
     scénario sous numpy 2.5/scipy récents)
 """
@@ -125,7 +125,7 @@ def test_fdr_mixed():
     ) == pytest.approx(0.07)
 
 
-# ── LTP : variance par blocs — équivalence exacte ────────────────────────────
+# ── LTP : variance par blocs : équivalence exacte ────────────────────────────
 
 def _hurst_autocov(n, H):
     lam = np.arange(n + 1, dtype=float)
@@ -173,7 +173,7 @@ def test_ltp_seeded_is_reproducible_with_ties():
 def test_ltp_rng_irrelevant_without_ties():
     # sans ex-æquo, le tirage n'intervient pas : tous les rng équivalents.
     # NB : les ex-æquo se jugent sur la série DÉTENDANCÉE (le détendançage
-    # peut en créer sur des données arrondies) — stat_short est vérifiée
+    # peut en créer sur des données arrondies), stat_short est vérifiée
     # sans ex-æquo après détendançage.
     x = _series("stat_short")
     trend = getMKStat(x)["trend"]

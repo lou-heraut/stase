@@ -5,11 +5,11 @@ repo soit auto-suffisant. Ils datent d'avant le renommage en stase :
 les chemins et imports (`process_extraction.py`, `tools.py`...) sont à
 adapter si on veut les rejouer.
 
-- `ref_extraction.R` — génère les références R d'extraction
-- `compare.py` — 22 scénarios process_extraction R vs Python
-- `compare_trend.R` / `compare_trend.py` — 73 scénarios Mann-Kendall
-- `compare_process_trend.R` / `.py` — 896 scénarios process_trend
-- `benchmark.py` / `benchmark_real.py` — mesures de performance ;
+- `ref_extraction.R` : génère les références R d'extraction
+- `compare.py` : 22 scénarios process_extraction R vs Python
+- `compare_trend.R` / `compare_trend.py` : 73 scénarios Mann-Kendall
+- `compare_process_trend.R` / `.py` : 896 scénarios process_trend
+- `benchmark.py` / `benchmark_real.py` : mesures de performance ;
   le jeu réel (228 chroniques HYDRO, ~5M lignes) a été déplacé le
   2026-07-15 vers `../EXstat/data_test/RRSE_csv/` (adapter le chemin
   en tête de script)

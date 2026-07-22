@@ -1,4 +1,4 @@
-"""Goldens R de process_extraction — 11 scénarios, tous les time_steps.
+"""Goldens R de process_extraction : 11 scénarios, tous les time_steps.
 
 Références : tests/data/ref_extraction/*.csv, générées par le package R
 EXstat (ref_extraction.R d'EXstat_Claude) sur un même jeu d'entrée de

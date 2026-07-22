@@ -1,4 +1,4 @@
-## compare_process_trend.R — Generates reference process_trend results
+## compare_process_trend.R : Generates reference process_trend results
 ## Run from project root:
 ##   Rscript EXstat_py/compare_process_trend.R
 

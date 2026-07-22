@@ -1,4 +1,4 @@
-# CLAUDE.md — stase
+# CLAUDE.md : stase
 
 ## Contexte
 
@@ -10,9 +10,9 @@ pente de Sen). Il sert de **moteur de données** au package `card`
 (`CARD_project/card`), qui exécute les fiches CARD YAML.
 
 Repos liés (séparation actée le 2026-07-15 : les repos R restent
-« propres, sans IA » — référence de validation uniquement ; tout le
+« propres, sans IA » : référence de validation uniquement ; tout le
 travail IA se fait dans stase et card) :
-- `EXstat_project/EXstat/` — code R d'origine, en maintenance
+- `EXstat_project/EXstat/` : code R d'origine, en maintenance
   (ne pas modifier, ne pas y ajouter de fichiers IA)
 - `CARD_project/card/` : consommateur de stase (son CHANGELOG.md trace
   ce qui a changé de son côté) ; `CARD_project/CARD-R/` : R d'origine,
@@ -37,9 +37,9 @@ statut en tête ; ne jamais recopier d'un fichier à l'autre, renvoyer.
 
 ```
 src/stase/
-  extraction.py   # process_extraction — moteur d'agrégation (cœur du projet)
-  trend.py        # process_trend — enveloppe MK + Sen par série × variable
-  tools.py        # cœur statistique : MK INDE/AR1/LTP, Sen, Hurst, FDR — GELÉ
+  extraction.py   # process_extraction : moteur d'agrégation (cœur du projet)
+  trend.py        # process_trend : enveloppe MK + Sen par série × variable
+  tools.py        # cœur statistique : MK INDE/AR1/LTP, Sen, Hurst, FDR, GELÉ
   _display.py     # _verbose_box partagé
 tests/
   test_extraction.py         # comportement du moteur
@@ -117,7 +117,7 @@ dépendance déclarée pandas>=2.2 (include_groups, observed=).
   tous les `groupby` passent `observed=True` explicitement (sinon les
   catégories vidées par un filtre `period` créent des lignes fantômes).
 - En multi-variables, les colonnes clés (`_hy`, `_ym`, `_season_*`,
-  `_yd`) sont calculées au premier usage puis réutilisées — ne pas les
+  `_yd`) sont calculées au premier usage puis réutilisées, ne pas les
   recalculer par variable.
 - `process_trend` unit les colonnes identifiantes multiples avec le
   séparateur `\x1f` (jamais `_` : les IDs peuvent en contenir) et

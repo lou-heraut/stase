@@ -1,4 +1,4 @@
-## compare_trend.R — Generates reference MK results for Python validation
+## compare_trend.R : Generates reference MK results for Python validation
 ## Run from project root:
 ##   Rscript EXstat_py/compare_trend.R
 

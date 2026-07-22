@@ -1,7 +1,7 @@
-"""Tests de process_trend — goldens R + cas limites.
+"""Tests de process_trend : goldens R + cas limites.
 
 Goldens : tests/data/ref_trend/pt_sc*.csv, générés par le package R EXstat
-(compare_process_trend.R d'EXstat_Claude) — 16 séries × 2 variables,
+(compare_process_trend.R d'EXstat_Claude), 16 séries × 2 variables,
 1990-2019. Tolérance 1e-10 (INDE/AR1 concordent exactement avec R).
 """
 

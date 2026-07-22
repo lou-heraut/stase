@@ -1,9 +1,9 @@
-> Archive historique — copié de `EXstat_Claude/CLAUDE.md` le 2026-07-15,
+> Archive historique : copié de `EXstat_Claude/CLAUDE.md` le 2026-07-15,
 > à la clôture de la conversion. Document d'époque, non maintenu :
 > les chemins et noms (EXstat_py, process_extraction.py...) sont ceux
 > d'avant le renommage en stase. État courant : CLAUDE.md à la racine.
 
-# CLAUDE.md — EXstat
+# CLAUDE.md : EXstat
 
 ## Contexte du projet
 
@@ -17,14 +17,14 @@ Réécriture complète du package en Python, en commençant par `process_extract
 
 ```
 R/
-  process_extraction.R   # Coeur du projet — réécrit en Python ✓
-  process_trend.R        # Enveloppe d'appel Mann-Kendall + Sen-Theil — réécrit en Python ✓
-  tools.R                # Fonctions statistiques — converties en Python ✓
+  process_extraction.R   # Coeur du projet : réécrit en Python ✓
+  process_trend.R        # Enveloppe d'appel Mann-Kendall + Sen-Theil, réécrit en Python ✓
+  tools.R                # Fonctions statistiques, converties en Python ✓
   EXstat.R               # Point d'entrée du package R
 
 EXstat_py/
   process_extraction.py  # Implémentation Python principale ✓
-  tools.py               # Mann-Kendall / Sen-Theil / FDR — port fidèle de tools.R ✓
+  tools.py               # Mann-Kendall / Sen-Theil / FDR, port fidèle de tools.R ✓
   process_trend.py       # Analyse de tendance MK / Sen-Theil ✓
   compare.py             # Comparaison R vs Python process_extraction (22/22 OK) ✓
   compare_trend.py          # Comparaison R vs Python tools.py (73/73 OK) ✓
@@ -43,17 +43,17 @@ data_test/RRSE_csv/      # 228 fichiers CSV de débit réel (format CSV, colonne
 
 ---
 
-## État d'implémentation — process_extraction
+## État d'implémentation : process_extraction
 
 ### Paramètres de process_extraction.R → Python
 
 | Paramètre R | Statut Python | Notes |
 |---|---|---|
 | `data` | ✅ Implémenté | DataFrame pandas |
-| `funct` | ✅ Implémenté | Callable **ou dict** `{name: callable}` — multi-fonctions supporté |
+| `funct` | ✅ Implémenté | Callable **ou dict** `{name: callable}`, multi-fonctions supporté |
 | `funct_args` | ✅ Implémenté | Liste simple ou liste de listes pour multi-fonctions |
 | `time_step` | ✅ Implémenté | Tous les 7 modes : `year`, `year-month`, `month`, `year-season`, `season`, `yearday`, `none` |
-| `sampling_period` | ✅ Implémenté | Chaîne `'MM-DD'` ou liste `['MM-DD','MM-DD']` — fenêtres croisées incluses |
+| `sampling_period` | ✅ Implémenté | Chaîne `'MM-DD'` ou liste `['MM-DD','MM-DD']`, fenêtres croisées incluses |
 | `period` | ✅ Implémenté | Filtre global de la période |
 | `NApct_lim` | ✅ Implémenté | Seuil de lacunes en % |
 | `rmNApct` | ✅ Implémenté | Suppression de la colonne NApct |
@@ -67,14 +67,14 @@ data_test/RRSE_csv/      # 228 fichiers CSV de débit réel (format CSV, colonne
 | `suffix` / `suffix_delimiter` | ✅ Implémenté | Produit cartésien `funct × suffix` : auto-détection de la colonne (col se terminant par `{delim}{s}`) ou remplacement explicite si col est spécifiée dans le tuple. |
 | `keep` | ✅ Implémenté | `None` (défaut) ou `'all'` : conserve toutes les colonnes d'origine, même nb de lignes que l'entrée. Valeur agrégée sur 1re ligne du groupe (NaN ailleurs). NApct toujours supprimé. Non supporté pour `month`/`season`/`yearday`. Pour `none` : toutes les lignes du groupe reçoivent la valeur. |
 | `rm_duplicates` | ✅ Implémenté | `False` (défaut) : lève `ValueError` avec les 5 premiers cas ; `True` : supprime automatiquement les doublons (garde la première occurrence). |
-| `dev` | ❌ Non implémenté | Mode développement (désactive certaines validations). Inutile en Python — les validations sont légères. |
+| `dev` | ❌ Non implémenté | Mode développement (désactive certaines validations). Inutile en Python, les validations sont légères. |
 
 ### Points Python sans équivalent R
 
 | Fonctionnalité Python | Description |
 |---|---|
 | `_detect_resolution` | Détection automatique de la résolution temporelle de l'entrée (day/month/season/year) pour adapter le dénominateur NApct lors de l'enchaînement d'agrégations |
-| Mapping Cython (`_PANDAS_AGG_ALIASES`) | Mappe `np.mean`, `np.max`, etc. vers les alias pandas Cython — gain ~20-68% sur les cas avec beaucoup de groupes |
+| Mapping Cython (`_PANDAS_AGG_ALIASES`) | Mappe `np.mean`, `np.max`, etc. vers les alias pandas Cython, gain ~20-68% sur les cas avec beaucoup de groupes |
 
 ---
 
@@ -101,12 +101,12 @@ Conséquence : écarts pouvant atteindre ~33 pts sur les fenêtres croisées (ex
 
 ### 4. NApct season : date de référence (minSampleStart)
 
-**R** utilise `year(minSampleStart)` où `minSampleStart` est le premier jour de la saison contenant la première date de données — peut précéder les données réelles (ex: DJF avec données démarrant en jan 2001 → saison démarrée en déc 2000).  
+**R** utilise `year(minSampleStart)` où `minSampleStart` est le premier jour de la saison contenant la première date de données, peut précéder les données réelles (ex: DJF avec données démarrant en jan 2001 → saison démarrée en déc 2000).  
 **Python** reproduit exactement cette logique via calcul numpy vectorisé.
 
 ### 5. NApct entrée déjà agrégée (nouveau)
 
-**R** utilise toujours des jours calendaires comme dénominateur, même si l'entrée est mensuelle ou saisonnière — donnant NApct≈96.7% pour un min annuel sur données mensuelles.  
+**R** utilise toujours des jours calendaires comme dénominateur, même si l'entrée est mensuelle ou saisonnière, donnant NApct≈96.7% pour un min annuel sur données mensuelles.  
 **Python** détecte automatiquement la résolution de l'entrée (`_detect_resolution`) et adapte le dénominateur : pour entrée mensuelle, le dénominateur est le nombre de mois dans la fenêtre.
 
 **Décision** : comportement Python supérieur et intentionnellement différent de R.
@@ -128,8 +128,8 @@ Conséquence : écarts pouvant atteindre ~33 pts sur les fenêtres croisées (ex
 - Vectorisation numpy pour mapping saison, NApct, year_ref
 - Copie unique du DataFrame à l'entrée (pas de duplication par purrr/reduce)
 - `_detect_resolution` : détection automatique de la résolution d'entrée pour NApct adaptatif
-- **ID → Categorical** : conversion automatique en `CategoricalDtype` au début de chaque appel — accélère `duplicated()` + tous les `groupby` de 1.4× (~0.08s coût unique, ~1.1s économisé par appel)
-- **Cache années unique** : `_window_ndays` et `_safe_date` calculés une fois par année unique (~60 ans) plutôt que par groupe station×année (~14k groupes) — 11–26× plus rapide pour ces étapes
+- **ID → Categorical** : conversion automatique en `CategoricalDtype` au début de chaque appel, accélère `duplicated()` + tous les `groupby` de 1.4× (~0.08s coût unique, ~1.1s économisé par appel)
+- **Cache années unique** : `_window_ndays` et `_safe_date` calculés une fois par année unique (~60 ans) plutôt que par groupe station×année (~14k groupes), 11–26× plus rapide pour ces étapes
 
 ### Paramètres non standard Python vs R
 
@@ -156,7 +156,7 @@ En R, `funct_args` utilise `na.rm=TRUE`. En Python, on utilise `{"skipna": True}
   - `period` qui exclut toutes les données → warning enrichi avec plage réelle des données
 - [x] verbose=True ✅ : encadré ASCII au démarrage (time_step, sampling, séries, période, variables), progression par variable (n groupes, NApct moy/max, filtrés), résumé final
 
-### is_date — notes d'implémentation
+### is_date : notes d'implémentation
 - `_circular_mean_months` : équivalent Python de `CircStats::circ.mean` sur axe [0, 12)
 - `_apply_is_date` : calcule `Shift = yday(min_date_in_window) - 1`, puis `yday_raw = argmax_0based + Shift`, puis correction circulaire par station
 - `nDay` basé sur l'année label `_hy` (matches R `check_leapYear(year(Date))`)
@@ -166,12 +166,12 @@ En R, `funct_args` utilise `na.rm=TRUE`. En Python, on utilise `{"skipna": True}
 
 ## Données de test
 
-- `data_test/HYDRO/` — chroniques journalières de débit (format texte), utilisées par `ref_extraction.R`
-- `data_test/RRSE_csv/` — 228 fichiers CSV de débit réel (colonnes : date, code, Qm3s), utilisés par `benchmark_real.py`
+- `data_test/HYDRO/` : chroniques journalières de débit (format texte), utilisées par `ref_extraction.R`
+- `data_test/RRSE_csv/` : 228 fichiers CSV de débit réel (colonnes : date, code, Qm3s), utilisés par `benchmark_real.py`
 
 Références de validation :
-- `EXstat_py/ref_output/` — CSVs process_extraction (22 scénarios, générés par `ref_extraction.R`)
-- `EXstat_py/ref_trend/` — CSVs MK + process_trend (générés par `compare_trend.R` et `compare_process_trend.R`)
+- `EXstat_py/ref_output/` : CSVs process_extraction (22 scénarios, générés par `ref_extraction.R`)
+- `EXstat_py/ref_trend/` : CSVs MK + process_trend (générés par `compare_trend.R` et `compare_process_trend.R`)
 
 ## Environnement Python
 
@@ -192,20 +192,20 @@ EXstat_py/python_env/bin/python3 EXstat_py/benchmark_real.py       # 228 station
 ## Known issues
 Voici plusieurs points à corriger et implémenter, par ordre de priorité :
 
-1. ✅ Résolu — is_date retourne maintenant `Int64` (entiers nullables, NaN → pd.NA). La valeur
+1. ✅ Résolu : is_date retourne maintenant `Int64` (entiers nullables, NaN → pd.NA). La valeur
    112 pour hy=2000 (première année tronquée, NApct=33.4%) est correcte : après vérification du
    code R (`reelSampleStart = max(Date_label, minDate_global)`, Shift=0 pour Jan 1), R donne
    également 112. C'est le 0-based yday du max dans la fenêtre disponible (Jan–Août 2001). Le
    NApct signale la troncature ; utiliser NApct_lim pour filtrer en analyse de tendance.
 
-2. ✅ Résolu — SC17 ajouté dans compare.py (type Int64, plage [-365,730], hy=2003 bissextile,
+2. ✅ Résolu : SC17 ajouté dans compare.py (type Int64, plage [-365,730], hy=2003 bissextile,
    années tronquées hy=2000/2015). 17/17 scénarios OK.
 
-3. ✅ Résolu — `np.argmax` ne peut pas être dans `_PANDAS_AGG_ALIASES` : pandas `idxmax()`
+3. ✅ Résolu : `np.argmax` ne peut pas être dans `_PANDAS_AGG_ALIASES` : pandas `idxmax()`
    retourne le label d'index (pas la position 0-based), et il n'existe pas d'alias Cython pour
    un argmax positionnel. Documenté en commentaire dans le code.
 
-4.a. ✅ Phase 1 terminée — Refonte interne de _normalize_funct (17/17 tests OK)
+4.a. ✅ Phase 1 terminée : Refonte interne de _normalize_funct (17/17 tests OK)
 
 **Ce qui a été fait (Phase 1) :**
 - Ajout de `_parse_funct_tuple(t)` : parse `(fn, *cols, kwargs?, is_date?)` selon les règles non ambiguës
@@ -232,11 +232,11 @@ Règles du parser de tuple (non ambiguës) :
 
 ---
 
-**Phase 2 — ✅ Terminée (17/17 tests OK)**
+**Phase 2 : ✅ Terminée (17/17 tests OK)**
 
 1. `_groupby_agg` accepte désormais `col_names: str | list[str]` :
    - Mono-colonne : chemin Cython inchangé
-   - Multi-colonnes : `groupby.apply(include_groups=False)` — funct reçoit `(*Series_par_colonne, **kwargs)`
+   - Multi-colonnes : `groupby.apply(include_groups=False)`, funct reçoit `(*Series_par_colonne, **kwargs)`
    - Validation des noms de colonnes dans le loop (ValueError explicite si introuvable)
 2. DeprecationWarning sur `funct_args` et `is_date` top-level : **reporté à Phase 3** (trop bruyant tant que compare.py utilise encore l'ancienne interface)
 
@@ -254,11 +254,11 @@ out = process_extraction(
 
 ---
 
-**Phase 3 — ✅ Terminée (17/17 tests OK, zéro FutureWarning)**
+**Phase 3 : ✅ Terminée (17/17 tests OK, zéro FutureWarning)**
 
 1. `compare.py` entièrement migré vers la nouvelle interface tuple :
-   - `funct={"QA": (np.mean, "Q", {"skipna": True})}` — pas de `funct_args`, pas de `nameEX`
-   - SC17 : `funct={"tQJXA": (np.argmax, "Q", True)}` — pas de `is_date` séparé
+   - `funct={"QA": (np.mean, "Q", {"skipna": True})}`, pas de `funct_args`, pas de `nameEX`
+   - SC17 : `funct={"tQJXA": (np.argmax, "Q", True)}`, pas de `is_date` séparé
 2. `benchmark.py` migré : `funct=(np.mean, "Q")`
 3. `FutureWarning` ajouté sur `funct_args` et `is_date` top-level si utilisés (vérifié : les tests n'en déclenchent aucun)
 
@@ -267,7 +267,7 @@ out = process_extraction(
 ## Interface funct finale (stable)
 
 ```python
-# Callable simple — col auto (première colonne numérique), kwargs={}, is_date=False
+# Callable simple : col auto (première colonne numérique), kwargs={}, is_date=False
 funct = np.mean
 
 # Tuple mono-colonne
@@ -290,27 +290,27 @@ Paramètres legacy toujours fonctionnels mais avec `FutureWarning` :
 
 ---
 
-## État d'implémentation — tools.py
+## État d'implémentation : tools.py
 
 ### Fonctions de tools.R → Python
 
 | Fonction R | Statut Python | Notes |
 |---|---|---|
-| `getMKStat(X)` | ✅ | Vectorisé (numpy triu_indices) — NAs ignorés par paire |
-| `getTiesCorrection(Z)` | ✅ | Vectorisé (np.unique) — Z doit être NA-free |
-| `getAR1Correction(Z)` | ✅ | n=len(Z) complet (inclut NAs) — fidèle à R |
-| `randomizedNormalScore(x)` | ✅ | Shuffle aléatoire dans les groupes d'ex-æquo — déterministe si pas d'ex-æquo |
+| `getMKStat(X)` | ✅ | Vectorisé (numpy triu_indices), NAs ignorés par paire |
+| `getTiesCorrection(Z)` | ✅ | Vectorisé (np.unique), Z doit être NA-free |
+| `getAR1Correction(Z)` | ✅ | n=len(Z) complet (inclut NAs), fidèle à R |
+| `randomizedNormalScore(x)` | ✅ | Shuffle aléatoire dans les groupes d'ex-æquo, déterministe si pas d'ex-æquo |
 | `HurstLkh(H, x)` | ✅ | np.linalg.slogdet pour stabilité numérique |
 | `estimateHurst(Z, ...)` | ✅ | scipy minimize_scalar bounds=[0.5, 1-1e-9] |
 | `generalMannKendall_hide(...)` | ✅ | 3 modes : INDE, AR1, LTP |
-| `GeneralMannKendall(...)` | ✅ | Wrapper public — dict {level, H, p, a [, stat, dep]} |
+| `GeneralMannKendall(...)` | ✅ | Wrapper public, dict {level, H, p, a [, stat, dep]} |
 | `fieldSignificance_FDR(...)` | ✅ | Benjamini-Hochberg 1995 |
 
 ### Optimisations Python
 
-- **LTP variance** : boucle O(n⁴) vectorisée en O(M²) avec numpy (M=n(n-1)/2) — identique à la boucle naïve à < 1e-11 (vérifié n=5,10,15) ; ~120× plus rapide que R pour n=50 (84 ms vs ~10 s)
-- **getMKStat** : triu_indices numpy — zéro boucle Python
-- **getTiesCorrection** : np.unique — zéro boucle Python
+- **LTP variance** : boucle O(n⁴) vectorisée en O(M²) avec numpy (M=n(n-1)/2), identique à la boucle naïve à < 1e-11 (vérifié n=5,10,15) ; ~120× plus rapide que R pour n=50 (84 ms vs ~10 s)
+- **getMKStat** : triu_indices numpy, zéro boucle Python
+- **getTiesCorrection** : np.unique, zéro boucle Python
 
 ### Divergences Python vs R (tools.py)
 
@@ -323,7 +323,7 @@ Conséquence : H peut différer de ~1.2e-4, entraînant des différences de stat
 
 #### randomizedNormalScore avec ex-æquo
 
-R : `rank(..., ties.method="random")` — non déterministe.  
+R : `rank(..., ties.method="random")`, non déterministe.  
 Python : même comportement non déterministe (np.random.shuffle dans les groupes).  
 Pour les données continues (sans ex-æquo), les deux sont identiques et déterministes. ✓
 
@@ -332,27 +332,27 @@ Pour les données continues (sans ex-æquo), les deux sont identiques et déterm
 73/73 checks OK :
 - LTP naive vs vectorized : diff < 1.1e-11 pour n=5,10,15
 - INDE/AR1 vs R : concordance à 1e-10 (13 scénarios × {H, p, a, stat, dep})
-- LTP vs R : concordance à 2e-3 (différences dues à la précision MLE — H toujours correct)
+- LTP vs R : concordance à 2e-3 (différences dues à la précision MLE, H toujours correct)
 
 ---
 
-## État d'implémentation — process_trend.py
+## État d'implémentation : process_trend.py
 
 ### Paramètres de process_trend.R → Python
 
 | Paramètre R | Statut Python | Notes |
 |---|---|---|
-| `dataEX` | ✅ | DataFrame pandas — sortie de process_extraction |
+| `dataEX` | ✅ | DataFrame pandas : sortie de process_extraction |
 | `MK_level` | ✅ | Niveau de signification (défaut 0.1) |
 | `time_dependency_option` | ✅ | 'INDE', 'AR1', 'LTP' |
 | `suffix` / `suffix_delimiter` | ✅ | Strip des suffixes pour regroupement et métadonnées |
-| `to_normalise` | ✅ | bool ou dict {variable: bool} — `a_normalise = a/mean(X)*100` si True |
-| `metaEX` | ✅ | DataFrame {variable_en, to_normalise} — surcharge to_normalise |
+| `to_normalise` | ✅ | bool ou dict {variable: bool}, `a_normalise = a/mean(X)*100` si True |
+| `metaEX` | ✅ | DataFrame {variable_en, to_normalise}, surcharge to_normalise |
 | `extreme_take_not_signif_into_account` | ✅ | Si False : seuls les H=True contribuent aux quantiles |
 | `extreme_take_only_series` | ✅ | Sous-ensemble de stations pour les quantiles extrêmes |
 | `extreme_by_suffix` | ✅ | Grouper les quantiles par nom complet ou nom sans suffixe |
-| `period_trend` | ✅ | [start, end] ou liste de paires — filtre temporel de l'analyse |
-| `period_change` | ✅ | Liste de 2 [start, end] — calcule le changement entre deux périodes |
+| `period_trend` | ✅ | [start, end] ou liste de paires, filtre temporel de l'analyse |
+| `period_change` | ✅ | Liste de 2 [start, end], calcule le changement entre deux périodes |
 | `extreme_prob` | ✅ | Probabilité pour les bornes extrêmes (défaut 0.01) |
 | `show_advance_stat` | ✅ | Ajoute colonnes `stat` et `dep` à la sortie |
 | `verbose` | ✅ | Affiche la progression (nb stations, tendances significatives) |
@@ -372,7 +372,7 @@ R stocke certaines colonnes comme des listes (colonnes de type list dans un tibb
 #### period_trend_start / period_trend_end
 
 R : `min(date, na.rm=TRUE)` et `max(date, na.rm=TRUE)` sur la colonne Date (toutes les lignes, y compris celles avec NA dans la variable).  
-Python : même comportement — `dates_ns.min()` / `.max()` sur toutes les dates, indépendamment des NAs dans X.
+Python : même comportement, `dates_ns.min()` / `.max()` sur toutes les dates, indépendamment des NAs dans X.
 
 ### Validation (compare_process_trend.py)
 
@@ -387,14 +387,14 @@ Colonnes validées : H, p, a, b, mean_period_trend, a_normalise, a_normalise_min
 
 ### Audit robustesse (process_trend.py)
 
-**Cas limites — comportement vérifié :**
+**Cas limites : comportement vérifié :**
 
 | Cas | Comportement |
 |---|---|
-| `n<3` (2 valeurs valides) | H=None, p=None, a=None — ligne présente dans la sortie |
-| Toutes les valeurs identiques (S=0) | H=None, p=None, a=0.0 — pas de division par zéro |
-| Série entièrement NA | H=None, p=None, a=None — ligne présente |
-| Une seule station | shape=(1, 13) — fonctionne normalement |
+| `n<3` (2 valeurs valides) | H=None, p=None, a=None, ligne présente dans la sortie |
+| Toutes les valeurs identiques (S=0) | H=None, p=None, a=0.0, pas de division par zéro |
+| Série entièrement NA | H=None, p=None, a=None, ligne présente |
+| Une seule station | shape=(1, 13) : fonctionne normalement |
 | `period_trend` hors données | UserWarning avec plage réelle disponible, shape=(0, 0) |
 
 **Validations ajoutées :**
@@ -404,7 +404,7 @@ Colonnes validées : H, p, a, b, mean_period_trend, a_normalise, a_normalise_min
 - Aucun résultat à concaténer → `UserWarning` + retour DataFrame vide
 
 **Verbose ASCII (process_trend) :**  
-Utilise `_verbose_box("process_trend", rows, width=66)` — même style que process_extraction (largeur 66, box UTF-8 `┌─/│/└`).  
+Utilise `_verbose_box("process_trend", rows, width=66)`, même style que process_extraction (largeur 66, box UTF-8 `┌─/│/└`).  
 Contenu : option/level, séries avec preview `(S00, S01, … (+n))`, variables, période.
 
 ### Benchmark LTP (n=50)
@@ -431,17 +431,17 @@ Fichiers : `data_test/RRSE_csv/*.csv`, format CSV, colonnes : date, code, Qm3s.
 
 | Scénario | Temps | Lignes sortie |
 |---|---|---|
-| Chargement 228 CSV (séquentiel) | 3.63s | — |
-| Chargement 228 CSV (ThreadPoolExecutor) | ~3.8s | — |
+| Chargement 228 CSV (séquentiel) | 3.63s |  |
+| Chargement 228 CSV (ThreadPoolExecutor) | ~3.8s |  |
 | QA : mean annuel, année civile | 2.74s | 14,261 |
 | QJXA : max annuel, 09-01 | 2.62s | 14,403 |
 | tQJXA : argmax + is_date, 09-01 | 4.05s | 14,403 |
 | QMNA : year-month mean → year min | 3.38s | 14,261 |
 | VCN10 : rolling(10) → year min, 09-01 | 4.23s | 14,403 |
-| **Total process_extraction** | **17.0s** | — |
+| **Total process_extraction** | **17.0s** |  |
 | process_trend QA (INDE) | 0.25s | 228 |
 | process_trend QJXA (INDE) | 0.23s | 228 |
-| **TOTAL pipeline complet** | **21.1s** | — |
+| **TOTAL pipeline complet** | **21.1s** |  |
 
 Le chargement parallèle (ThreadPoolExecutor) n'apporte pas de gain car le disque est suffisamment rapide et l'overhead Python domine.
 
@@ -458,7 +458,7 @@ Si l'ID est déjà categorical en entrée, le coût de conversion est nul.
 
 #### 2. Cache années pour `_window_ndays` et `_safe_date` (+3–4% supplémentaires)
 
-Dans `_extract_year`, les appels `_window_ndays` (via `np.vectorize`) et `_safe_date` (via list comprehension) étaient répétés pour chaque groupe station×année — typiquement 14k appels pour 228 stations × 60 ans.
+Dans `_extract_year`, les appels `_window_ndays` (via `np.vectorize`) et `_safe_date` (via list comprehension) étaient répétés pour chaque groupe station×année, typiquement 14k appels pour 228 stations × 60 ans.
 
 Remplacement par un cache par année unique (~60 années uniques) :
 - `np.vectorize(_window_ndays)` : 0.104s → 0.004s (**26× plus rapide**)
@@ -466,7 +466,7 @@ Remplacement par un cache par année unique (~60 années uniques) :
 
 #### Correction de bug : `np.argmax` sur groupes tout-NA
 
-`np.argmax` (via pandas) lève `ValueError: Encountered all NA values` sur un groupe entièrement NA — cas fréquent sur données réelles (stations avec années sans mesure). Fix dans `_groupby_agg` : les fonctions non-Cython reçoivent un wrapper `_agg_safe` qui retourne `np.nan` pour les groupes tout-NA.
+`np.argmax` (via pandas) lève `ValueError: Encountered all NA values` sur un groupe entièrement NA, cas fréquent sur données réelles (stations avec années sans mesure). Fix dans `_groupby_agg` : les fonctions non-Cython reçoivent un wrapper `_agg_safe` qui retourne `np.nan` pour les groupes tout-NA.
 
 ### Résultats avant / après optimisations
 
@@ -484,15 +484,15 @@ Remplacement par un cache par année unique (~60 années uniques) :
 
 ## À implémenter ensuite
 
-- [x] `suffix` (4.b) : ✅ implémenté — expansion cartésienne funct × suffix, délimiteur configurable
+- [x] `suffix` (4.b) : ✅ implémenté, expansion cartésienne funct × suffix, délimiteur configurable
 - [x] `tools.R` → Python ✅ (73/73 scénarios OK)
 - [x] `process_trend.R` → Python ✅ (896/896 scénarios OK, audit robustesse OK)
 - [ ] **`sampling_period` par série** : permettre de passer un dict `{station_id: "MM-DD"}` ou `{station_id: ["MM-DD","MM-DD"]}` pour appliquer une fenêtre différente à chaque série. Exemple d'usage : stations de différents bassins versants avec des années hydrologiques décalées.
-  - **Non implémenté en R** — feature Python uniquement.
+  - **Non implémenté en R** : feature Python uniquement.
   - À concevoir : découpage du DataFrame par station, appel `process_extraction` avec le bon `sampling_period` par groupe, puis `pd.concat` des résultats. Ou alternative : dispatch interne dans `_extract_year`.
   - À tester : dict incomplet (stations absentes → valeur par défaut ?), mélange scalaire/liste, interactions avec `NApct_lim`, `period`, `suffix`.
 
-### suffix — comportement implémenté
+### suffix : comportement implémenté
 
 ```python
 # Col de base explicite dans le tuple

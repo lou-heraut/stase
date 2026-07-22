@@ -1,5 +1,5 @@
 """
-benchmark_real.py — process_extraction + process_trend sur 228 stations réelles
+benchmark_real.py : process_extraction + process_trend sur 228 stations réelles
 (data_test/RRSE_csv/ : ~5M lignes journalières de débit)
 
 Run from project root:
@@ -52,7 +52,7 @@ print(sep)
 
 timings = {}
 
-# ── 1. QA — mean annuel, année civile ────────────────────────────────────────
+# ── 1. QA : mean annuel, année civile ────────────────────────────────────────
 t0 = time.perf_counter()
 qa = process_extraction(
     raw,
@@ -63,7 +63,7 @@ qa = process_extraction(
 timings["QA"] = time.perf_counter() - t0
 print(fmt.format("QA  (year mean, civile)", timings["QA"], len(qa)))
 
-# ── 2. QJXA — max annuel, année hydrologique ─────────────────────────────────
+# ── 2. QJXA : max annuel, année hydrologique ─────────────────────────────────
 t0 = time.perf_counter()
 qjxa = process_extraction(
     raw,
@@ -75,7 +75,7 @@ qjxa = process_extraction(
 timings["QJXA"] = time.perf_counter() - t0
 print(fmt.format("QJXA (year max, 09-01)", timings["QJXA"], len(qjxa)))
 
-# ── 3. tQJXA — date du max annuel ────────────────────────────────────────────
+# ── 3. tQJXA : date du max annuel ────────────────────────────────────────────
 t0 = time.perf_counter()
 tqjxa = process_extraction(
     raw,
@@ -87,7 +87,7 @@ tqjxa = process_extraction(
 timings["tQJXA"] = time.perf_counter() - t0
 print(fmt.format("tQJXA (argmax + is_date, 09-01)", timings["tQJXA"], len(tqjxa)))
 
-# ── 4. QMNA — mean mensuel → min annuel ──────────────────────────────────────
+# ── 4. QMNA : mean mensuel → min annuel ──────────────────────────────────────
 t0 = time.perf_counter()
 _monthly = process_extraction(
     raw,
@@ -104,7 +104,7 @@ qmna = process_extraction(
 timings["QMNA"] = time.perf_counter() - t0
 print(fmt.format("QMNA (year-month → year min)", timings["QMNA"], len(qmna)))
 
-# ── 5. VCN10 — rolling(10).mean → year min ───────────────────────────────────
+# ── 5. VCN10 : rolling(10).mean → year min ───────────────────────────────────
 t0 = time.perf_counter()
 raw_s = raw.sort_values(["ID", "Date"])
 roll10 = (

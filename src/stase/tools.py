@@ -15,7 +15,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.
 
 """
-EXstat — Statistical tools (faithful Python conversion of tools.R)
+EXstat : Statistical tools (faithful Python conversion of tools.R)
 
 Mann-Kendall (INDE / AR1 / LTP), Sen-Theil slope, FDR field significance.
 
@@ -70,7 +70,7 @@ def getTiesCorrection(Z):
 
     Returns
     -------
-    float  — ties correction (subtract from basic variance)
+    float, ties correction (subtract from basic variance)
     """
     Z = np.asarray(Z, dtype=float)
     _, counts = np.unique(Z, return_counts=True)
@@ -92,7 +92,7 @@ def getAR1Correction(Z):
     dict  {"lag1": rho_1, "correction": n_s/n}
     """
     Z = np.asarray(Z, dtype=float)
-    n = len(Z)          # full length including NaNs — matches R's n
+    n = len(Z)          # full length including NaNs, matches R's n
     Z0 = Z[~np.isnan(Z)]
     m = np.mean(Z0)
 
@@ -119,14 +119,14 @@ def randomizedNormalScore(x, rng=None):
     x   : array-like
     rng : None | int | numpy.random.Generator
         Source of randomness for tie-breaking. None (default) draws a
-        fresh non-deterministic generator — same statistical behaviour
+        fresh non-deterministic generator : same statistical behaviour
         as R's ties.method="random", but without touching numpy's
         global random state. Pass an int (seed) or a Generator for
         reproducible results.
 
     Note: the tie randomization is an implementation choice inherited
     from tools.R (Hamed 2008 does not specify tie handling at the
-    normal-score step — see the R docstring). For continuous data
+    normal-score step : see the R docstring). For continuous data
     (no ties) the result is fully deterministic and matches R exactly,
     whatever `rng`.
     """
@@ -159,12 +159,12 @@ def HurstLkh(H, x):
 
     Parameters
     ----------
-    H : float  — candidate Hurst coefficient
-    x : array-like  — normal-score-transformed series (NaN allowed)
+    H : float, candidate Hurst coefficient
+    x : array-like, normal-score-transformed series (NaN allowed)
 
     Returns
     -------
-    float  — log-likelihood value (maximise over H)
+    float, log-likelihood value (maximise over H)
     """
     x = np.asarray(x, dtype=float)
     n = len(x)
@@ -195,10 +195,10 @@ def estimateHurst(Z, do_detrending=True, trend=None, rng=None):
 
     Parameters
     ----------
-    Z  : array-like  — full series (NaN allowed for gapped data)
+    Z  : array-like, full series (NaN allowed for gapped data)
     do_detrending : bool
-    trend : float or None  — pre-computed Sen slope (None → compute)
-    rng : None | int | numpy.random.Generator — tie-breaking randomness
+    trend : float or None, pre-computed Sen slope (None → compute)
+    rng : None | int | numpy.random.Generator, tie-breaking randomness
         (see randomizedNormalScore); only matters when the detrended
         series contains ties.
     """
@@ -225,7 +225,7 @@ def estimateHurst(Z, do_detrending=True, trend=None, rng=None):
 # ── LTP variance: 4-level loop (naive reference + vectorized) ───────────────
 
 def _ltp_variance_naive(C, n):
-    """O(n^4) reference — same iteration order as tools.R.
+    """O(n^4) reference : same iteration order as tools.R.
 
     j in [2..n] (R) ↔ [1..n-1] (Python 0-based)
     i in [1..j-1]   ↔ [0..j-1]
@@ -255,7 +255,7 @@ def _ltp_variance_vectorized(C, n, block_elems=2 ** 24):
 
     The M×M computation is evaluated by row blocks of at most
     `block_elems` elements so memory stays bounded (~a few hundred MB)
-    whatever n — the full M×M matrices would need (n(n-1)/2)^2 floats,
+    whatever n : the full M×M matrices would need (n(n-1)/2)^2 floats,
     i.e. >3 GB from n≈200. Same sum, block by block; for the usual
     annual series (n ≤ ~90) a single block is used and the computation
     is identical to the previous non-blocked version.
@@ -269,7 +269,7 @@ def _ltp_variance_vectorized(C, n, block_elems=2 ** 24):
     lags_ij = j_arr - i_arr                  # always > 0
     d = (2.0 - 2.0 * C[lags_ij]).astype(float)  # denominator factor per pair
 
-    L = j_arr[None, :]   # (1, M)   — second pair uses same (j,i) set as (l,k)
+    L = j_arr[None, :]   # (1, M), second pair uses same (j,i) set as (l,k)
     K = i_arr[None, :]   # (1, M)
 
     block = max(1, int(block_elems) // M)
@@ -293,7 +293,7 @@ def _ltp_variance_vectorized(C, n, block_elems=2 ** 24):
     return total
 
 
-# Public alias — use vectorized by default
+# Public alias : use vectorized by default
 _ltp_variance = _ltp_variance_vectorized
 
 
@@ -416,11 +416,11 @@ def generalMannKendall_hide(X, level=0.1, time_dependency_option='INDE',
 def GeneralMannKendall(X, level=0.1, time_dependency_option='INDE',
                         do_detrending=True, show_advance_stat=False,
                         verbose=False, rng=None):
-    """Public wrapper — returns dict {level, H, p, a [, stat, dep]}.
+    """Public wrapper : returns dict {level, H, p, a [, stat, dep]}.
 
     Mirrors R's GeneralMannKendall tibble output.
 
-    rng : None | int | numpy.random.Generator — LTP only : source du
+    rng : None | int | numpy.random.Generator, LTP only : source du
         tirage aléatoire des ex-æquo (cf. randomizedNormalScore). Sans
         effet pour INDE/AR1 et pour les séries sans ex-æquo.
     """
@@ -450,12 +450,12 @@ def fieldSignificance_FDR(pvals, level=0.1):
 
     Parameters
     ----------
-    pvals : array-like  — local p-values
+    pvals : array-like, local p-values
     level : float
 
     Returns
     -------
-    float  — pFDR threshold; local p-values ≤ pFDR are field-significant.
+    float, pFDR threshold; local p-values ≤ pFDR are field-significant.
              Returns 0 if no site is field-significant.
     """
     pvals = np.asarray(pvals, dtype=float)

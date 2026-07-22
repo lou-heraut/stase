@@ -1,5 +1,5 @@
 """
-compare_process_trend.py — Cross-validate process_trend.py against R's process_trend.R
+compare_process_trend.py : Cross-validate process_trend.py against R's process_trend.R
 
 Run from project root:
     EXstat_py/python_env/bin/python3 EXstat_py/compare_process_trend.py
@@ -45,7 +45,7 @@ def check(label, got, expected, atol=1e-10, rtol=0.0):
 def compare_df(py_df, ref_df, scenario, numeric_cols, bool_cols=None,
                date_cols=None, atol=1e-10):
     """Compare Python output DataFrame against R reference row-by-row."""
-    # Align on (ID, variable_en) — both should be sorted the same way
+    # Align on (ID, variable_en) : both should be sorted the same way
     key = ["ID", "variable_en"]
     py  = py_df.sort_values(key).reset_index(drop=True)
     ref = ref_df.sort_values(key).reset_index(drop=True)

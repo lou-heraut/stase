@@ -131,7 +131,7 @@ def compare_results(
     # Comparaison NApct
     diff_napct = np.abs(merged["R_NApct"] - merged["Py_NApct"])
     max_napct  = diff_napct.max()
-    napct_tag  = "" if napct_strict else "  [divergence intentionnelle — dénominateur réel vs approx. R]"
+    napct_tag  = "" if napct_strict else "  [divergence intentionnelle, dénominateur réel vs approx. R]"
     print(f"\n  NApct :{napct_tag}")
     print(f"    Différence max : {max_napct:.2f} pts")
     if max_napct > 1.0:
@@ -369,7 +369,7 @@ def run_all():
                          merge_on=["ID"], napct_strict=True)
     results.append(ok)
 
-    # ---- Scénario 17 : is_date — np.argmax avec correction circulaire ----
+    # ---- Scénario 17 : is_date, np.argmax avec correction circulaire ----
     # Données SC2 (hydro year 09-01, 2001-2015).
     # Vérifie : type entier, plage, hy=2003 (bissextile), années tronquées.
     data = load_r_csv("sc2_year_hydro_sep_input")
@@ -401,7 +401,7 @@ def run_all():
     else:
         print(f"  ✓ {len(full)} années complètes dans [-365, 730]")
 
-    # 3. hy=2003 couvre fév 2004 (année bissextile) — valeur présente
+    # 3. hy=2003 couvre fév 2004 (année bissextile) : valeur présente
     hy2003 = py_out[(py_out["ID"] == "serie_A") & (py_out["Date"].dt.year == 2003)]
     if len(hy2003) != 1:
         print("  ✗ hy=2003 introuvable")
@@ -410,7 +410,7 @@ def run_all():
         print(f"  ✓ hy=2003 (fenêtre couvre fév bisextile 2004) : tQJXA={hy2003['tQJXA'].iloc[0]}")
 
     # 4. Années tronquées hy=2000 / hy=2015 : valeur présente et entière
-    #    (la troncature est signalée par NApct > 0, pas par NA — utiliser NApct_lim pour filtrer)
+    #    (la troncature est signalée par NApct > 0, pas par NA : utiliser NApct_lim pour filtrer)
     for hy_lbl in [2000, 2015]:
         row = py_out[(py_out["ID"] == "serie_A") & (py_out["Date"].dt.year == hy_lbl)]
         if len(row) != 1:
@@ -423,7 +423,7 @@ def run_all():
     print(f"\n  → {'✓ OK' if ok_sc17 else '✗ DIFFÉRENCES'}")
     results.append(ok_sc17)
 
-    # ---- Scénario 18 : dict multi-variables — QJXA + QA en un seul appel ----
+    # ---- Scénario 18 : dict multi-variables, QJXA + QA en un seul appel ----
     # Vérifie que le résultat combiné est identique à deux appels séparés.
     data = load_r_csv("sc1_year_default_input")
     ref18_qjxa = process_extraction(
@@ -448,7 +448,7 @@ def run_all():
 
     required_cols = {"ID", "Date", "QJXA", "QA"}
     if not required_cols.issubset(py_out18.columns):
-        print(f"  ✗ Colonnes manquantes — obtenu : {py_out18.columns.tolist()}")
+        print(f"  ✗ Colonnes manquantes : obtenu : {py_out18.columns.tolist()}")
         ok_sc18 = False
     else:
         print(f"  ✓ Colonnes : {py_out18.columns.tolist()}")
@@ -464,7 +464,7 @@ def run_all():
     print(f"\n  → {'✓ OK' if ok_sc18 else '✗ DIFFÉRENCES'}")
     results.append(ok_sc18)
 
-    # ---- Scénario 19 : multi-colonnes — bias(Q_obs, Q_sim) ----
+    # ---- Scénario 19 : multi-colonnes, bias(Q_obs, Q_sim) ----
     # Vérifie le chemin groupby.apply multi-colonnes contre calcul numpy direct.
     _base19 = load_r_csv("sc1_year_default_input").copy()
     _rng19  = np.random.default_rng(19)
@@ -504,7 +504,7 @@ def run_all():
     print(f"\n  → {'✓ OK' if ok_sc19 else '✗ DIFFÉRENCES'}")
     results.append(ok_sc19)
 
-    # ---- Scénario 20 : suffix — QA × [obs, sim] → QA_obs + QA_sim ----
+    # ---- Scénario 20 : suffix, QA × [obs, sim] → QA_obs + QA_sim ----
     # Vérifie que suffix produit le même résultat que deux appels individuels.
     _base20 = load_r_csv("sc1_year_default_input").copy()
     _base20["Q_obs"] = _base20["Q"] * 1.1
@@ -532,7 +532,7 @@ def run_all():
     ok_sc20 = True
 
     if not {"ID", "Date", "QA_obs", "QA_sim"}.issubset(py_out20.columns):
-        print(f"  ✗ Colonnes manquantes — obtenu : {py_out20.columns.tolist()}")
+        print(f"  ✗ Colonnes manquantes : obtenu : {py_out20.columns.tolist()}")
         ok_sc20 = False
     else:
         print(f"  ✓ Colonnes : {py_out20.columns.tolist()}")
@@ -548,7 +548,7 @@ def run_all():
     print(f"\n  → {'✓ OK' if ok_sc20 else '✗ DIFFÉRENCES'}")
     results.append(ok_sc20)
 
-    # ---- Scénario 21 : keep="all" — fan-out vers lignes d'origine ----
+    # ---- Scénario 21 : keep="all", fan-out vers lignes d'origine ----
     # Paramètre Python uniquement (pas de référence R).
     # Vérifie :
     #   - même nb de lignes que l'entrée
@@ -577,7 +577,7 @@ def run_all():
         print(f"  ✓ Nb lignes = nb lignes entrée ({len(data21)})")
 
     if not set(data21.columns).issubset(set(py_out21.columns)):
-        print(f"  ✗ Colonnes d'origine manquantes — obtenu : {py_out21.columns.tolist()}")
+        print(f"  ✗ Colonnes d'origine manquantes, obtenu : {py_out21.columns.tolist()}")
         ok_sc21 = False
     else:
         print(f"  ✓ Colonnes d'origine présentes")
@@ -612,7 +612,7 @@ def run_all():
     print(f"\n  → {'✓ OK' if ok_sc21 else '✗ DIFFÉRENCES'}")
     results.append(ok_sc21)
 
-    # ---- Scénario 22 : NAyear_lim — troncature autour d'une longue lacune ----
+    # ---- Scénario 22 : NAyear_lim, troncature autour d'une longue lacune ----
     # Paramètre Python uniquement (pas de référence R).
     # Données : série A 2000-2019, lacune 2008-2013 (5 ans+), série B sans lacune.
     # Avec NAyear_lim=3 : la lacune (>3 ans) doit déclencher une troncature.

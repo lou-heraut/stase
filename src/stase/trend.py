@@ -14,7 +14,7 @@
 # or FITNESS FOR A PARTICULAR PURPOSE.
 
 """
-EXstat — process_trend (faithful Python conversion of process_trend.R)
+EXstat : process_trend (faithful Python conversion of process_trend.R)
 
 Takes the output of process_extraction (one row per series×date) and runs
 Mann-Kendall + Sen-Theil per series and per variable.
@@ -59,7 +59,7 @@ def _mk_series(grp, var, date_col, level, option, advanced_stats, to_norm,
     )
 
     # Intercept: b = mean(X) - mu_t * a
-    # mu_t = mean(date_days) / mean(diff(date_days))   — matches R's get_intercept
+    # mu_t = mean(date_days) / mean(diff(date_days))  , matches R's get_intercept
     dates_days = dates_ns.astype(np.int64) / 86_400_000_000_000.0   # ns → days
     b = np.nan
     if len(dates_days) > 1:
@@ -518,7 +518,7 @@ def process_trend(
         if _n_max > 200:
             warnings.warn(
                 f"LTP avec des séries de {_n_max} valeurs : le calcul de "
-                "variance est en O(n⁴) — temps potentiellement très long. "
+                "variance est en O(n⁴), temps potentiellement très long. "
                 "LTP est prévu pour des séries agrégées (annuelles "
                 "typiquement, n ≤ ~100).",
                 UserWarning,
@@ -532,7 +532,7 @@ def process_trend(
             )
             if _has_ties:
                 warnings.warn(
-                    "LTP : des ex-æquo sont présents dans les séries — le "
+                    "LTP : des ex-æquo sont présents dans les séries, le "
                     "tirage aléatoire des rangs (ties.method='random', "
                     "hérité de tools.R) rend les résultats non "
                     "reproductibles d'un appel à l'autre. Passez seed=<int> "
@@ -693,7 +693,7 @@ def process_trend(
 
     # Restore original ID column name(s)
     if len(original_id_cols) > 1:
-        # Split united ID back into original columns — the control-char
+        # Split united ID back into original columns, the control-char
         # separator makes this lossless even if IDs contain "_"
         split = result[id_col].str.split(_ID_SEP, expand=True)
         loc = result.columns.get_loc(id_col)
@@ -706,7 +706,7 @@ def process_trend(
         pass   # synthetic "ID" stays as-is
 
     # Nullable boolean H: with too few valid values the MK test yields
-    # None — without this the column would silently become object dtype
+    # None : without this the column would silently become object dtype
     # and boolean filtering (trendEX[trendEX.H]) would break
     if "H" in result.columns:
         result["H"] = pd.array(result["H"], dtype="boolean")
