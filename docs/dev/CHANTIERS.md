@@ -30,3 +30,28 @@ l'utilisateur :
 Fonctionnalité listée à l'époque de la conversion, jamais faite parce
 que `Adaptive` couvre le besoin autrement. À reprendre seulement si un
 usage réel apparaît côté card, pas par symétrie d'API.
+
+## `period` par série, depuis des colonnes de paramètre
+
+Ouvert le 2026-07-22, prérequis d'un chantier de card (« convertir les
+12 fiches à horizon figé au modèle suffixe »).
+
+Le filtre `period` de `process_extraction` prend deux dates littérales et
+s'applique identiquement à toutes les séries. Or card a besoin qu'une
+période varie **par série** : un horizon défini par degré de
+réchauffement ne tombe pas aux mêmes dates d'une station à l'autre.
+
+Le rôle `param_cols` transporte déjà des bornes constantes par série, et
+les fonctions savent les recevoir en kwargs : c'est ainsi que les fiches
+delta ont été converties. Ce qui manque est l'équivalent pour le filtre
+de période lui-même, qui n'est pas une fonction mais un paramètre du
+moteur.
+
+Deux voies à instruire :
+- étendre `period` à accepter des noms de colonnes en plus de dates,
+  au prix d'un paramètre à deux sens ;
+- un paramètre distinct, plus explicite mais une surface de plus.
+
+Contrainte à ne pas perdre : le filtre s'applique aujourd'hui avant
+l'agrégation et avant le comptage des lacunes, et le passage par série
+doit garder cet ordre pour ne pas changer les résultats existants.
