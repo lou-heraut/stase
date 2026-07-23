@@ -43,6 +43,18 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+### Corrigé
+
+- **Colonnes de saison rangées dans l'ordre déclaré après `compress`.**
+  Le pivot long → large les rendait dans l'ordre alphabétique (`DJF`,
+  `JJA`, `MAM`, `SON`), alors que la sortie longue les range par date et
+  que la référence R suit l'ordre demandé (`DJF`, `MAM`, `JJA`, `SON`) :
+  une même extraction donnait deux ordres selon sa forme, et divergeait
+  de R. `_apply_compress` reçoit désormais la liste `seasons` et
+  réordonne dessus, comme il le faisait déjà pour les mois. Les mois
+  étaient déjà corrects. Vérifié sur le corpus card (`QSA_season`,
+  `Bias_season` et les 14 autres fiches saisonnières).
+
 ### Modifié
 
 - README : les capacités du moteur passent d'une liste à puces à des

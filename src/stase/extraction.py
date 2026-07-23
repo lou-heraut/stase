@@ -984,8 +984,16 @@ def _apply_compress(
     time_step: str,
     id_col: str,
     value_names: list[str],
+    seasons: list[str] | None = None,
 ) -> pd.DataFrame:
-    """Pivot long → wide : place les étiquettes mois/saison en colonnes."""
+    """Pivot long → wide : place les étiquettes mois/saison en colonnes.
+
+    Les colonnes suivent l'ordre déclaré : janvier à décembre pour les
+    mois, et pour les saisons la liste `seasons` telle qu'elle a été
+    demandée. Sans elle, le pivot les rendait dans l'ordre alphabétique
+    (DJF, JJA, MAM, SON) alors que la sortie longue les range par date :
+    une même extraction donnait deux ordres selon sa forme.
+    """
     vn = value_names  # liste des noms de colonnes valeur présents dans result
 
     def _pivot(df, index_cols, col_key, val_cols):
@@ -1012,12 +1020,12 @@ def _apply_compress(
         result = result.drop(columns=["YearSeason"])
         out = _pivot(result, [id_col, "Date"], "_ref", vn)
         out["Date"] = pd.to_datetime(out["Date"].astype(str) + "-01-01")
-        return _reorder_value_cols(out, id_col, vn, None)
+        return _reorder_value_cols(out, id_col, vn, seasons)
 
     elif time_step == "season":
         result = result.drop(columns=["Date"])
         out = _pivot(result, [id_col], "Season", vn)
-        return _reorder_value_cols(out, id_col, vn, None)
+        return _reorder_value_cols(out, id_col, vn, seasons)
 
     elif time_step == "month":
         result["_ref"] = [_MONTH_ABBR[m - 1] for m in result["Month"]]
@@ -1032,20 +1040,20 @@ def _reorder_value_cols(
     df: pd.DataFrame,
     id_col: str,
     value_names: list[str],
-    month_order: list[str] | None,
+    ordre: list[str] | None,
 ) -> pd.DataFrame:
     """Réordonne les colonnes valeur dans l'ordre naturel mois/saison."""
     struct = [c for c in df.columns if not any(
         c.startswith(v + "_") or c == v for v in value_names
     )]
-    if month_order is not None:
+    if ordre is not None:
         # Tri par position dans la liste de référence (mois ou saisons)
         def _sort_key(col):
             for v in value_names:
                 if col.startswith(v + "_"):
                     suffix = col[len(v) + 1:]
-                    if suffix in month_order:
-                        return month_order.index(suffix)
+                    if suffix in ordre:
+                        return ordre.index(suffix)
             return 999
         val_cols = sorted(
             [c for c in df.columns if c not in struct],
@@ -1747,7 +1755,7 @@ def process_extraction(
 
     # --- Compress ---
     if compress:
-        result = _apply_compress(result, time_step, id_col, var_names)
+        result = _apply_compress(result, time_step, id_col, var_names, Seasons)
 
     # --- Expand ---
     if expand:
