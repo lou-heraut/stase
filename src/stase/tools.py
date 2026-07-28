@@ -433,7 +433,7 @@ def GeneralMannKendall(X, level=0.1, time_dependency_option='INDE',
     )
     out = {
         "level": level,
-        "H":     res["H"],
+        "h":     res["H"],
         "p":     res["P"],
         "a":     res["TREND"],
     }

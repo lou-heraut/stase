@@ -246,7 +246,7 @@ def test_empty_extraction_chains_into_trend():
                                 period=["2050-01-01", "2060-12-31"])
         t = process_trend(qa)
     assert len(t) == 0
-    assert "H" in t.columns
+    assert "h" in t.columns
 
 
 # ── argmax positionnel Cython : équivalence avec np.nanargmax générique ─────

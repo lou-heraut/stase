@@ -156,7 +156,7 @@ def _empty_trend_frame(id_cols, has_suffix, has_change, advanced_stats):
     if has_suffix:
         cols["variable_no_suffix"] = pd.Series(dtype=object)
     cols["level"] = pd.Series(dtype="float64")
-    cols["H"] = pd.array([], dtype="boolean")
+    cols["h"] = pd.array([], dtype="boolean")
     cols["p"] = pd.Series(dtype="float64")
     cols["a"] = pd.Series(dtype="float64")
     if advanced_stats:
@@ -225,7 +225,7 @@ def process_trend(
         couvertes (par leur nom exact ou leur nom de base), sinon
         ValueError. Pilote a_relative et change_relative.
     extremes_include_non_significant : bool
-        Si False, seules les séries significatives (H=True) contribuent
+        Si False, seules les séries significatives (h=True) contribuent
         aux bornes de quantiles.
     extremes_from_series : list | None
         Sous-ensemble d'identifiants de séries contribuant aux bornes de
@@ -261,7 +261,7 @@ def process_trend(
     variable n'est pas relative.
 
         {id}, variable, [variable_no_suffix], level,
-        H          test significatif (booléen nullable, NA si moins de
+        h          test significatif (booléen nullable, NA si moins de
                    3 valeurs valides), p
         a          pente de Sen, en unité de la variable par pas de temps
         a_min/max  bornes de quantiles de a, même unité
@@ -627,7 +627,7 @@ def process_trend(
             period_rows.append(mk_df)
 
             if verbose:
-                n_sig = int(mk_df["H"].fillna(False).sum())
+                n_sig = int(mk_df["h"].fillna(False).sum())
                 print(f"    '{var}' : {len(mk_df)} séries, "
                       f"{n_sig} tendances significatives")
 
@@ -653,7 +653,7 @@ def process_trend(
         # que masquées puis restaurées : même résultat, pas d'état à
         # rétablir.
         if not extremes_include_non_significant:
-            in_series = in_series & period_df["H"].fillna(False).to_numpy()
+            in_series = in_series & period_df["h"].fillna(False).to_numpy()
 
         pairs = [("a", "a_min", "a_max"),
                  ("a_relative", "a_relative_min", "a_relative_max")]
@@ -705,17 +705,17 @@ def process_trend(
     elif len(original_id_cols) == 0:
         pass   # synthetic "ID" stays as-is
 
-    # Nullable boolean H: with too few valid values the MK test yields
+    # Nullable boolean h: with too few valid values the MK test yields
     # None : without this the column would silently become object dtype
-    # and boolean filtering (trendEX[trendEX.H]) would break
-    if "H" in result.columns:
-        result["H"] = pd.array(result["H"], dtype="boolean")
+    # and boolean filtering (trendEX[trendEX.h]) would break
+    if "h" in result.columns:
+        result["h"] = pd.array(result["h"], dtype="boolean")
 
     if verbose:
-        n_sig = int(result["H"].fillna(False).sum())
+        n_sig = int(result["h"].fillna(False).sum())
         n_vars = result["variable"].nunique()
         print(f"  → {len(result)} résultats ({n_vars} variables × "
               f"{len(result) // max(n_vars, 1)} séries) · "
-              f"{n_sig} tendances H=True")
+              f"{n_sig} tendances h=True")
 
     return result

@@ -23,7 +23,11 @@ _REF_RENAMES = {"variable_en": "variable",
                 "a_normalise_max": "a_relative_max",
                 "mean_period_trend": "mean_period",
                 "period_trend_start": "period_start",
-                "period_trend_end": "period_end"}
+                "period_trend_end": "period_end",
+                # `H` majuscule etait le seul rescape du portage R : dans
+                # le meme dictionnaire, P, STAT et TREND avaient deja ete
+                # mis en minuscules. Les goldens gardent la casse R.
+                "H": "h"}
 NUM_BASE = ["p", "a", "b", "mean_period", "a_relative",
             "a_relative_min", "a_relative_max"]
 DATE_BASE = ["period_start", "period_end"]
@@ -48,7 +52,7 @@ def assert_matches_ref(py, ref_name, numeric_cols, date_cols=(), atol=1e-10,
     ref = ref.sort_values(key).reset_index(drop=True)
     assert len(py) == len(ref), f"longueurs py={len(py)} R={len(ref)}"
 
-    for g, e in zip(py["H"], ref["H"]):
+    for g, e in zip(py["h"], ref["h"]):
         assert bool(g) == bool(e)
 
     for col in numeric_cols:
@@ -148,7 +152,7 @@ def _yearly(slope=0.5, n=30, ids=("S1",), seed=0):
 def test_single_series_slope_recovered():
     t = process_trend(_yearly(slope=0.5), verbose=False)
     assert len(t) == 1
-    assert bool(t.H.iloc[0]) is True
+    assert bool(t.h.iloc[0]) is True
     # pente de Sen par pas de temps (annuel ici) ≈ pente injectée
     assert t.a.iloc[0] == pytest.approx(0.5, rel=0.15)
 
@@ -159,8 +163,8 @@ def test_series_with_too_few_values_gives_na():
         _yearly(n=2, ids=("COURT",)),
     ], ignore_index=True)
     t = process_trend(data, verbose=False).set_index("ID")
-    assert bool(t.loc["LONG", "H"]) is True
-    assert pd.isna(t.loc["COURT", "H"])
+    assert bool(t.loc["LONG", "h"]) is True
+    assert pd.isna(t.loc["COURT", "h"])
     assert pd.isna(t.loc["COURT", "p"])
 
 
@@ -170,9 +174,9 @@ def test_h_is_nullable_boolean():
         _yearly(n=2, ids=("COURT",)),
     ], ignore_index=True)
     t = process_trend(data, verbose=False)
-    assert t.H.dtype == "boolean"
+    assert t.h.dtype == "boolean"
     # le filtrage booléen fonctionne malgré le NA
-    assert set(t[t.H == True].ID) == {"LONG"}          # noqa: E712
+    assert set(t[t.h == True].ID) == {"LONG"}          # noqa: E712
 
 
 def test_multiple_id_columns_with_underscore_roundtrip():
@@ -219,11 +223,11 @@ def test_period_trend_outside_data_returns_typed_empty():
                           verbose=False)
     assert len(t) == 0
     # colonnes standard présentes : les accès aval fonctionnent
-    for c in ("ID", "variable", "H", "p", "a", "b",
+    for c in ("ID", "variable", "h", "p", "a", "b",
               "period_start", "a_relative_min"):
         assert c in t.columns
-    assert t.H.dtype == "boolean"
-    assert len(t[t.H == True]) == 0                      # noqa: E712
+    assert t.h.dtype == "boolean"
+    assert len(t[t.h == True]) == 0                      # noqa: E712
 
 
 def test_empty_input_returns_typed_empty():
@@ -231,7 +235,7 @@ def test_empty_input_returns_typed_empty():
         t = process_trend(pd.DataFrame({"ID": [], "Date": [], "X": []})
                           .astype({"Date": "datetime64[ns]"}))
     assert len(t) == 0
-    assert "ID" in t.columns and "H" in t.columns
+    assert "ID" in t.columns and "h" in t.columns
 
 
 # ── Suffixes : nom de base, mise en commun des bornes, relative ──────────────

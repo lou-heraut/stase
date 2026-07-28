@@ -43,6 +43,28 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+### Changé
+
+- **La colonne `H` de la tendance devient `h` (2026-07-28).** Rupture
+  assumée, et achèvement d'un renommage laissé à moitié : dans le
+  dictionnaire de sortie de `GeneralMannKendall`, `res["P"]` devenait
+  déjà `p`, `res["STAT"]` devenait `stat` et `res["DEP"]` devenait
+  `dep`. Seul `res["H"]` restait `H`, si bien qu'une trame de résultat
+  portait une majuscule unique au milieu de `level`, `p`, `a`, `b`,
+  `period_start`... Ce n'était pas un choix, c'était un oubli, et il
+  imposait de se souvenir d'une exception.
+
+  Les clés MAJUSCULES du portage R (`{"H", "P", "STAT", "TREND",
+  "DEP"}`) sont **conservées** dans la fonction interne : c'est la
+  transcription fidèle de la sortie R, elle n'est pas une surface
+  publique, et la traduction vers les noms de colonnes se fait déjà d'un
+  seul endroit.
+
+  Les CSV de référence engendrés par le package R **ne sont pas
+  touchés** : leur intérêt est de ne pas bouger. La traduction se fait à
+  la lecture, dans `_REF_RENAMES` de `tests/test_trend.py`, où
+  `a_normalise → a_relative` et `variable_en → variable` vivaient déjà.
+
 ### Corrigé
 
 - **Colonnes de saison rangées dans l'ordre déclaré après `compress`.**

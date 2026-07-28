@@ -200,23 +200,23 @@ def test_ltp_does_not_touch_global_random_state():
 
 def test_gmk_less_than_3_values():
     out = GeneralMannKendall(np.array([1.0, 2.0]))
-    assert out["H"] is None and out["p"] is None and out["a"] is None
+    assert out["h"] is None and out["p"] is None and out["a"] is None
 
 
 def test_gmk_all_nan():
     out = GeneralMannKendall(np.array([np.nan] * 10))
-    assert out["H"] is None and out["p"] is None and out["a"] is None
+    assert out["h"] is None and out["p"] is None and out["a"] is None
 
 
 def test_gmk_constant_series():
     # variance nulle après correction des ex-æquo : pas de test possible,
     # mais la pente de Sen vaut 0.0 (comportement R conservé)
     out = GeneralMannKendall(np.full(10, 7.5))
-    assert out["H"] is None and out["p"] is None
+    assert out["h"] is None and out["p"] is None
     assert out["a"] == pytest.approx(0.0)
 
 
 def test_gmk_output_keys():
     out = GeneralMannKendall(_series("trend_long"), show_advance_stat=True)
-    assert set(out) == {"level", "H", "p", "a", "stat", "dep"}
-    assert out["H"] is True
+    assert set(out) == {"level", "h", "p", "a", "stat", "dep"}
+    assert out["h"] is True
