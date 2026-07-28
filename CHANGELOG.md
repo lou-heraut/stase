@@ -43,6 +43,25 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+### Corrigé
+
+- **Le lint de CI était rouge sans qu'une ligne de code ait bougé
+  (2026-07-28).** Le workflow faisait `pip install ruff` sans version :
+  il prenait la dernière, dont les défauts s'élargissent au fil des
+  sorties, et 26 erreurs sont apparues d'elles-mêmes (imports non triés,
+  `TRY004`, `C408`, `SIM102`...). La même commande, avec la version
+  utilisée en local, dit « All checks passed ».
+
+  Deux verrous, tous deux nécessaires : la **version est épinglée** dans
+  `pyproject.toml` (`[dev]`, un seul endroit, le CI installe `.[dev]`)
+  et le **jeu de règles est déclaré** dans le même fichier (`E4`, `E7`,
+  `E9`, `F`), le même que card et card-api. Sans le second, une montée
+  de version change encore le verdict.
+
+  Les 26 signalements ne sont pas perdus : élargir le jeu de règles est
+  une décision à prendre sur les trois dépôts à la fois, pas un effet de
+  bord d'une sortie de ruff.
+
 ### Changé
 
 - **La colonne `H` de la tendance devient `h` (2026-07-28).** Rupture

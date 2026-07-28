@@ -24,8 +24,16 @@ dependencies = [
 Repository = "https://github.com/lou-heraut/stase"
 Issues = "https://github.com/lou-heraut/stase/issues"
 
+# La version de ruff est ÉPINGLÉE ICI, et nulle part ailleurs. Le CI
+# faisait `pip install ruff` sans version : il prenait la dernière, dont
+# les défauts s'élargissent au fil des sorties, et le lint est passé au
+# rouge sans qu'une ligne de code ait bougé (26 erreurs le 2026-07-28,
+# zéro avec la version épinglée, sur la même commande). Poser le numéro
+# dans le fichier de CI en plus du pyproject recréerait le même écart
+# d'un cran plus loin : un seul endroit le porte, et le CI installe
+# `.[dev]`.
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff==0.15.22"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -33,6 +41,19 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+
+# Jeu de règles DÉCLARÉ, pas hérité. Épingler la version ne suffit pas :
+# sans cette section, `ruff check` applique les défauts de la version
+# installée, donc une montée de version change le verdict sans que rien
+# n'ait bougé. Même jeu que card et card-api : un contributeur qui passe
+# d'un dépôt à l'autre ne change pas d'habitudes. L'élargir (imports
+# triés, TRY, SIM...) est une décision à part, qui se prendra sur les
+# trois dépôts à la fois ou sur aucun.
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # tools.py est un port gelé de tools.R : les noms de variables 'l' et 'I'

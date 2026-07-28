@@ -38,5 +38,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      # Version épinglée dans pyproject.toml ([dev]), avec le jeu de
+      # règles : « passe en local » doit impliquer « passe en CI ».
+      - run: pip install -e .[dev]
       - run: ruff check src tests benchmarks
