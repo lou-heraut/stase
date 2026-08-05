@@ -61,7 +61,19 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.0.
+Rien depuis la 0.6.1.
+
+## 0.6.1 (2026-08-05)
+
+### Corrigé
+
+- **`stase.__version__` annonçait 0.4.0 pour un paquet en 0.6.0.** Ni
+  `set_version.py` ni `test_citation.py` ne regardaient ce fichier : le
+  numéro y était figé depuis le 2026-07-20. Exactement le même trou que
+  dans card, bouché là-bas le 2026-08-04, et repéré ici en écrivant la
+  provenance de card, qui s'apprêtait à publier ce faux numéro comme
+  version du moteur. Le script l'écrit désormais, le test refuse le
+  désaccord.
 
 ## 0.6.0 (2026-08-05)
 

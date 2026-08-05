@@ -107,6 +107,12 @@ def main():
         change.append("pyproject.toml")
     if ecrire("CITATION.cff", r'^version:\s*"[^"]+"', f'version: "{version}"'):
         change.append("CITATION.cff")
+    # `stase.__version__` : il annonçait 0.4.0 pour un paquet en 0.6.0,
+    # parce que ni ce script ni `test_citation.py` ne le regardaient.
+    # Même trou que dans card, bouché là-bas le 2026-08-04.
+    if ecrire("src/stase/__init__.py", r'^__version__ = "[^"]+"',
+              f'__version__ = "{version}"'):
+        change.append("src/stase/__init__.py")
     if ecrire("CITATION.cff", r'^date-released:\s*"[^"]+"',
               f'date-released: "{aujourd_hui}"'):
         change.append("CITATION.cff (date)")
