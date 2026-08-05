@@ -22,7 +22,7 @@ rétroactivement : un tag `v0.2.0` désignerait un arbre dont le
 `pyproject.toml` annonce 0.1.0, ce qui serait un deuxième mensonge. Les
 tags commencent à 0.5.0.
 
-## Versions, en quatre phrases
+## Versions, en cinq phrases
 
 1. **Au quotidien, on ne touche à aucun numéro.** `card` et le service
    installent le moteur depuis `main` : un correctif est disponible dès
@@ -61,6 +61,10 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+Rien depuis la 0.6.0.
+
+## 0.6.0 (2026-08-05)
+
 ### Ajouté
 
 - **Une règle dit enfin QUAND couper une version (2026-08-05).** Le
@@ -75,26 +79,7 @@ tags commencent à 0.5.0.
   formulation dans card et dans card-api, où le défaut était le même :
   card était resté quatre-vingt-treize commits derrière son dernier tag.
 
-### Corrigé
-
-- **Le lint de CI était rouge sans qu'une ligne de code ait bougé
-  (2026-07-28).** Le workflow faisait `pip install ruff` sans version :
-  il prenait la dernière, dont les défauts s'élargissent au fil des
-  sorties, et 26 erreurs sont apparues d'elles-mêmes (imports non triés,
-  `TRY004`, `C408`, `SIM102`...). La même commande, avec la version
-  utilisée en local, dit « All checks passed ».
-
-  Deux verrous, tous deux nécessaires : la **version est épinglée** dans
-  `pyproject.toml` (`[dev]`, un seul endroit, le CI installe `.[dev]`)
-  et le **jeu de règles est déclaré** dans le même fichier (`E4`, `E7`,
-  `E9`, `F`), le même que card et card-api. Sans le second, une montée
-  de version change encore le verdict.
-
-  Les 26 signalements ne sont pas perdus : élargir le jeu de règles est
-  une décision à prendre sur les trois dépôts à la fois, pas un effet de
-  bord d'une sortie de ruff.
-
-### Changé
+### Modifié
 
 - **La colonne `H` de la tendance devient `h` (2026-07-28).** Rupture
   assumée, et achèvement d'un renommage laissé à moitié : dans le
@@ -116,7 +101,30 @@ tags commencent à 0.5.0.
   la lecture, dans `_REF_RENAMES` de `tests/test_trend.py`, où
   `a_normalise → a_relative` et `variable_en → variable` vivaient déjà.
 
+- README : les capacités du moteur passent d'une liste à puces à des
+  exemples exécutés. `param_cols` y était absent alors que c'est la
+  capacité la plus récente, l'enchaînement des agrégations et la fenêtre
+  adaptative n'étaient que mentionnés. Chaque valeur affichée est celle
+  réellement produite, vérifiée par exécution.
+
 ### Corrigé
+
+- **Le lint de CI était rouge sans qu'une ligne de code ait bougé
+  (2026-07-28).** Le workflow faisait `pip install ruff` sans version :
+  il prenait la dernière, dont les défauts s'élargissent au fil des
+  sorties, et 26 erreurs sont apparues d'elles-mêmes (imports non triés,
+  `TRY004`, `C408`, `SIM102`...). La même commande, avec la version
+  utilisée en local, dit « All checks passed ».
+
+  Deux verrous, tous deux nécessaires : la **version est épinglée** dans
+  `pyproject.toml` (`[dev]`, un seul endroit, le CI installe `.[dev]`)
+  et le **jeu de règles est déclaré** dans le même fichier (`E4`, `E7`,
+  `E9`, `F`), le même que card et card-api. Sans le second, une montée
+  de version change encore le verdict.
+
+  Les 26 signalements ne sont pas perdus : élargir le jeu de règles est
+  une décision à prendre sur les trois dépôts à la fois, pas un effet de
+  bord d'une sortie de ruff.
 
 - **Colonnes de saison rangées dans l'ordre déclaré après `compress`.**
   Le pivot long → large les rendait dans l'ordre alphabétique (`DJF`,
@@ -127,14 +135,6 @@ tags commencent à 0.5.0.
   réordonne dessus, comme il le faisait déjà pour les mois. Les mois
   étaient déjà corrects. Vérifié sur le corpus card (`QSA_season`,
   `Bias_season` et les 14 autres fiches saisonnières).
-
-### Modifié
-
-- README : les capacités du moteur passent d'une liste à puces à des
-  exemples exécutés. `param_cols` y était absent alors que c'est la
-  capacité la plus récente, l'enchaînement des agrégations et la fenêtre
-  adaptative n'étaient que mentionnés. Chaque valeur affichée est celle
-  réellement produite, vérifiée par exécution.
 
 ## 0.5.0 (2026-07-22)
 
