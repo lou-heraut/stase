@@ -32,6 +32,9 @@ statut en tête ; ne jamais recopier d'un fichier à l'autre, renvoyer.
   Python).
 - docs/dev/archive/ : documents d'époque, non maintenus (`PLAN.md`,
   `CONVERSION_R.md`, `harnais_R/`).
+- Ménage documentaire : la procédure est commune aux trois dépôts et vit
+  dans `../../CARD_project/card/docs/dev/NETTOYAGE.md`, avec l'état de la
+  campagne en cours. Rien à en recopier ici.
 
 ## Structure
 
