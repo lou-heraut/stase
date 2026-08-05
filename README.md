@@ -156,6 +156,16 @@ Pour des variables hydroclimatiques prêtes à l'emploi (étiages, crues,
 saisonnalité...), le package [card](https://github.com/lou-heraut/card)
 fournit un corpus de fiches paramétrées exécutées par stase.
 
+## L'écosystème
+
+| | |
+|---|---|
+| [card](https://github.com/lou-heraut/card) | le recueil de fiches, en Python |
+| **stase** | le moteur d'agrégation et de tendance (vous êtes ici) |
+| [card4r](https://github.com/lou-heraut/card4r) | le même recueil, appelé depuis R |
+| [card-api](https://github.com/lou-heraut/card-api) | le service web, sur les débits Hub'Eau |
+| [CARD-R](https://github.com/lou-heraut/CARD-R) · [EXstat](https://github.com/lou-heraut/EXstat) | les paquets R historiques, remplacés |
+
 ## Citer
 
 Ce moteur est un logiciel scientifique : merci de le citer si vous
