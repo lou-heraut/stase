@@ -9,9 +9,11 @@
 
 """Propage un numéro de version depuis pyproject.toml.
 
-Une version vit à trois endroits : `pyproject.toml` (la source),
-`CITATION.cff` et `codemeta.json` (les métadonnées de citation). Les
-recopier à la main, c'est se garantir un oubli. Ce script les accorde,
+Une version vit à cinq endroits : `pyproject.toml` (la source),
+`CITATION.cff` et `codemeta.json` (les métadonnées de citation),
+`src/stase/__init__.py` (ce que `stase.__version__` annonce) et le
+modèle de citation du `README.md`. Les recopier à la main, c'est se
+garantir un oubli. Ce script les accorde,
 et `tests/test_citation.py` vérifie qu'ils le sont restés.
 
 Usage (depuis la racine du dépôt) :
@@ -116,6 +118,11 @@ def main():
     if ecrire("CITATION.cff", r'^date-released:\s*"[^"]+"',
               f'date-released: "{aujourd_hui}"'):
         change.append("CITATION.cff (date)")
+    # Le modèle de citation du README annonçait 0.5.0 pour un paquet en
+    # 0.6.1 : un numéro écrit dans une prose est un numéro qui retarde.
+    if ecrire("README.md", r'\(version \d+\.\d+(?:\.\d+)?\)',
+              f'(version {version})'):
+        change.append("README.md")
 
     p = ROOT / "codemeta.json"
     d = json.loads(p.read_text(encoding="utf-8"))

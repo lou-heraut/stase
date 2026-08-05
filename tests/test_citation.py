@@ -35,6 +35,12 @@ def test_versions_de_citation_accordees():
         "parce que ce test ne le regardait pas. Un consommateur qui publie "
         "la version du moteur publiait donc un faux numéro."
     )
+    readme = _version("README.md", r'\(version (\d+\.\d+(?:\.\d+)?)\)')
+    assert readme == paquet, (
+        f"le modèle de citation du README annonce {readme}, le paquet est "
+        f"en {paquet}. Il annonçait 0.5.0 pour un paquet en 0.6.1 jusqu'au "
+        "2026-08-05."
+    )
     assert codemeta["version"] == paquet, (
         f"codemeta.json annonce {codemeta['version']}, le paquet est en {paquet}"
     )
