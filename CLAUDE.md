@@ -119,13 +119,20 @@ dépendance déclarée pandas>=2.2 (include_groups, observed=).
 
 ## Versions et citation
 
-Doctrine complète : « Versions, en quatre phrases », en tête de
+Doctrine complète : « Versions, en cinq phrases », en tête de
 `CHANGELOG.md`. Ce qu'il ne faut pas rater :
 
 - **Au quotidien : rien.** La production suit `main`, le service publie
   le commit et le SWHID de card et de stase dans chaque réponse. Le seul
   geste régulier est l'entrée `## Non publié` du CHANGELOG. **Le
   proposer soi-même**, l'utilisateur ne le demandera pas.
+- **Quand couper une version** : un changement de l'API du moteur se
+  publie le jour où il est livré (et card remonte son `stase>=`), le
+  reste attend la fin du chantier en cours, jamais le calendrier.
+  Critères exacts : cinquième phrase du CHANGELOG.
+  `python scripts/set_version.py --etat` donne les faits. **Le proposer
+  soi-même** aussi : l'utilisateur ne le demandera pas, il l'a dit
+  explicitement le 2026-08-05.
 - **Publier une version** (rare : PyPI, dépôt citable) :
   `python scripts/set_version.py 0.3.0` accorde `pyproject.toml`,
   `CITATION.cff` et `codemeta.json`. Ne JAMAIS y écrire un numéro à la

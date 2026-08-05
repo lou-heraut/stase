@@ -24,9 +24,9 @@ tags commencent à 0.5.0.
 
 ## Versions, en quatre phrases
 
-1. **Au quotidien, on ne touche à aucun numéro.** La production suit
-   `main` : une correction de fiche part en ligne au prochain
-   `make update`, sans négociation.
+1. **Au quotidien, on ne touche à aucun numéro.** `card` et le service
+   installent le moteur depuis `main` : un correctif est disponible dès
+   qu'il est poussé, sans négociation.
 2. **Ce qui trace, c'est le commit, et c'est automatique.** Chaque
    réponse du service dit le commit exact de card et de stase qui l'a
    produite, son identifiant pérenne Software Heritage
@@ -40,8 +40,40 @@ tags commencent à 0.5.0.
    `tests/test_citation.py` refuse le désaccord.
 4. **Le seul geste manuel régulier, c'est ce fichier.** Un changement
    qui mérite d'être retenu s'écrit sous `## Non publié`.
+5. **Quand couper ? Sur du contenu, jamais sur un calendrier.** Trois cas
+   suffisent :
+   - un changement de l'**API du moteur** (une signature, un rôle de
+     colonne, un comportement d'agrégation) se publie le jour où il est
+     livré, et `card` remonte son `stase>=` dans la foulée. C'est
+     précisément ce qui avait manqué à `param_cols` : card a déclaré
+     `stase>=0.4.0` en s'appuyant sur un rôle que le 0.4.0 ne contenait
+     pas, si bien que la contrainte mentait ;
+   - sinon, on coupe **à la fin d'un chantier**, au moment où l'on écrit
+     l'entrée qui le clôt, si « Non publié » porte au moins une chose
+     qu'un consommateur du moteur remarquerait ;
+   - jamais au milieu d'un chantier, et jamais parce que du temps a
+     passé.
+
+   `python scripts/set_version.py --etat` donne les faits (dernier tag,
+   commits depuis, entrées non publiées) sans rien décider. Même règle et
+   même commande dans card et dans card-api, pour que les trois dépôts se
+   versionnent de la même façon.
 
 ## Non publié
+
+### Ajouté
+
+- **Une règle dit enfin QUAND couper une version (2026-08-05).** Le
+  chantier « Discipline de version et étiquetage », ouvert le
+  2026-07-22, est refermé : le bump en 0.5.0 couvre `param_cols`, card
+  déclare `stase>=0.5.0`, et le tag `v0.5.0` existe. Ne manquait que sa
+  troisième demande, « bumper au moment du changement, pas
+  rétroactivement », qui n'est pas une action mais une règle : elle est
+  désormais la cinquième phrase de ce fichier, et `set_version.py
+  --etat` en pose les faits (dernier tag, commits depuis, entrées non
+  publiées) sans rien décider. Même règle, même commande et même
+  formulation dans card et dans card-api, où le défaut était le même :
+  card était resté quatre-vingt-treize commits derrière son dernier tag.
 
 ### Corrigé
 
