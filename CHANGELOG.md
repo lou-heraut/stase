@@ -61,7 +61,15 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.1.
+### Corrigé
+
+- **Le README montrait `H` là où la colonne s'appelle `h` (2026-08-06).**
+  Le renommage date de la 0.6.0, où son entrée de CHANGELOG le qualifie
+  de « rupture assumée » : le README, lui, n'a jamais suivi. Son exemple
+  de tendance levait donc un `KeyError` sur `tr[["id", "variable", "H",
+  ...]]`, dans la section la plus copiée du fichier. Trouvé en repassant
+  au banc les cinq autres exemples, qui rendent tous exactement les
+  valeurs affichées.
 
 ## 0.6.1 (2026-08-05)
 

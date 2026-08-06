@@ -60,13 +60,13 @@ automatically. Numeric identifiers must be cast to text:
 
 ```python
 tr = stase.trend(qa)
-tr[["id", "variable", "H", "p", "a", "a_relative"]]
-# id variable     H            p         a  a_relative
+tr[["id", "variable", "h", "p", "a", "a_relative"]]
+# id variable     h            p         a  a_relative
 #  A       QA  True 2.767571e-16 -0.055412   -0.632233
 #  B       QA False 8.189923e-01  0.001022    0.010210
 ```
 
-One row per series and per variable. `H` tells whether the trend is
+One row per series and per variable. `h` tells whether the trend is
 significant at the requested level, `a` is the Sen slope in the unit of
 the variable per year, `a_relative` the same as a percentage of the mean.
 Three assumptions about temporal dependence are available: `INDE`
