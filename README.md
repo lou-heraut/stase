@@ -1,10 +1,10 @@
-# stase [<img src="docs/img/flower.png" align="right" width="160" height="160" alt="stase"/>](https://github.com/lou-heraut/card)
+# stase [<img src="https://raw.githubusercontent.com/lou-heraut/stase/main/docs/img/flower.png" align="right" width="160" height="160" alt="stase"/>](https://github.com/lou-heraut/card)
 
 <!-- badges: start -->
 [![tests](https://github.com/lou-heraut/stase/actions/workflows/tests.yml/badge.svg)](https://github.com/lou-heraut/stase/actions/workflows/tests.yml)
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue)](https://lifecycle.r-lib.org/articles/stages.html)
 ![](https://img.shields.io/github/last-commit/lou-heraut/stase)
-[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-bd0000)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-bd0000)](https://github.com/lou-heraut/stase/blob/main/LICENSE)
 <!-- badges: end -->
 
 **STASE** (*STatistical Aggregation & Stationarity Evaluation*) aggregates
@@ -196,7 +196,7 @@ stase is the Python port of the R package
 [EXstat](https://github.com/lou-heraut/EXstat) (INRAE, UR RiverLy),
 validated number by number against R. The details of the validation and
 the documented divergences are in
-[docs/dev/ORIGINE_R.md](docs/dev/ORIGINE_R.md). GPL-3 licence, authors in
+[docs/dev/ORIGINE_R.md](https://github.com/lou-heraut/stase/blob/main/docs/dev/ORIGINE_R.md). GPL-3 licence, authors in
 the AUTHORS file.
 
 ## Development
@@ -207,4 +207,4 @@ pip install -e . && pytest      # full suite, goldens included in tests/data/
 
 CI: `.github/workflows/tests.yml` (Python × pandas matrix, ruff).
 Benchmark on real data: `benchmarks/bench_rrse.py`. What changed and
-when: [CHANGELOG.md](CHANGELOG.md).
+when: [CHANGELOG.md](https://github.com/lou-heraut/stase/blob/main/CHANGELOG.md).

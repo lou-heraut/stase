@@ -63,6 +63,20 @@ tags commencent à 0.5.0.
 
 ### Corrigé
 
+- **Le paquet n'emportait aucune description : sa page PyPI serait vide
+  (2026-08-06).** Pas de champ `readme` dans le `pyproject.toml`, donc
+  9 489 caractères de description manquants et une page qui n'afficherait
+  que le résumé d'une ligne. Même défaut que card, corrigé chez lui la
+  veille. Les liens du README passent en absolu dans la foulée, PyPI ne
+  résolvant aucun chemin relatif : quatre liens et l'image d'en-tête
+  auraient été morts. Vérifié par `twine check` et en interrogeant chaque
+  URL.
+
+  Rien ne pressait, l'installation se faisant depuis GitHub. Mais stase
+  devra être publié **en même temps que card** : sans lui, un
+  `pip install card` depuis PyPI ne résout pas sa dépendance. Autant que
+  ce ne soit pas une découverte ce jour-là.
+
 - **Le README montrait `H` là où la colonne s'appelle `h` (2026-08-06).**
   Le renommage date de la 0.6.0, où son entrée de CHANGELOG le qualifie
   de « rupture assumée » : le README, lui, n'a jamais suivi. Son exemple
