@@ -61,6 +61,10 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+Rien depuis la 0.6.2.
+
+## 0.6.2 (2026-08-11)
+
 ### Corrigé
 
 - **Le paquet n'emportait aucune description : sa page PyPI serait vide

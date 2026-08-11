@@ -173,7 +173,7 @@ published work.
 
 ```
 Héraut L., Dorchies D., Sauquet É., Vidal J.-P. (2026). stase:
-statistical aggregation and stationarity evaluation (version 0.6.1).
+statistical aggregation and stationarity evaluation (version 0.6.2).
 Software Heritage: swh:1:rev:<commit>
 https://github.com/lou-heraut/stase
 ```
