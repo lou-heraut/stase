@@ -416,13 +416,33 @@ def generalMannKendall_hide(X, level=0.1, time_dependency_option='INDE',
 def GeneralMannKendall(X, level=0.1, time_dependency_option='INDE',
                         do_detrending=True, show_advance_stat=False,
                         verbose=False, rng=None):
-    """Public wrapper : returns dict {level, H, p, a [, stat, dep]}.
+    """Mann-Kendall test on a single series.
 
-    Mirrors R's GeneralMannKendall tibble output.
+    Parameters
+    ----------
+    X : array-like
+        The values to test, in chronological order.
+    level : float, default 0.1
+        Significance level.
+    time_dependency_option : {"INDE", "AR1", "LTP"}, default "INDE"
+        Dependency model assumed for the series.
+    do_detrending : bool, default True
+        Remove the trend before estimating the dependency structure.
+    show_advance_stat : bool, default False
+        Also return the ``stat`` and ``dep`` diagnostics.
+    verbose : bool, default False
+        Print the progress of the computation.
+    rng : int or numpy.random.Generator, optional
+        LTP only: source of the random draw that breaks ties, see
+        ``randomizedNormalScore``. No effect for INDE and AR1, nor for
+        series without ties.
 
-    rng : None | int | numpy.random.Generator, LTP only : source du
-        tirage aléatoire des ex-æquo (cf. randomizedNormalScore). Sans
-        effet pour INDE/AR1 et pour les séries sans ex-æquo.
+    Returns
+    -------
+    dict
+        ``{"level", "h", "p", "a"}``, plus ``"stat"`` and ``"dep"`` when
+        ``show_advance_stat`` is set. Mirrors the tibble the R function
+        returns.
     """
     res = generalMannKendall_hide(
         X=X, level=level,

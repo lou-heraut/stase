@@ -85,7 +85,15 @@ docs/img/         # figures du README (déposées manuellement)
    traitent par de meilleurs messages d'erreur.
 3. **Wording générique.** Jamais « station » dans les messages, la doc ou
    le code : dire « série ». stase est agnostique du domaine.
-4. **Versions.** On n'y touche pas au quotidien. Chaînage à ne pas
+4. **Docstring d'une fonction PUBLIQUE** (tout ce que `stase.__all__`
+   annonce) : **anglais, sections NumPy**. C'est de la documentation,
+   pas un commentaire, et c'est la norme du Python scientifique. Mesuré
+   par `tests/test_docstrings.py`, qui porte les raisons. Même règle et
+   même garde dans card : les deux paquets s'installent et se lisent
+   ensemble, une norme qui s'arrêterait à la frontière de l'un ne
+   servirait à rien. La machinerie interne écrit dans la langue qu'elle
+   veut, elle s'adresse à qui ouvre le fichier.
+5. **Versions.** On n'y touche pas au quotidien. Chaînage à ne pas
    rater, rappelé ici exprès : une modif notable se note sous
    `## Non publié` du CHANGELOG ; publier se fait par
    `scripts/set_version.py`, jamais à la main ; et si un changement du

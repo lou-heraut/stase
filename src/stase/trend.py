@@ -199,86 +199,92 @@ def process_trend(
     seed=None,
     verbose=False,
 ):
-    """Analyse de tendance Mann-Kendall + pente de Sen sur la sortie de
-    stase.extract.
+    """Mann-Kendall test and Sen slope on the output of an extraction.
 
-    Paramètres
+    Parameters
     ----------
-    data : DataFrame
-        Sortie de stase.extract : une ligne par (série, date), les
-        colonnes numériques sont les variables à analyser.
-    level : float
-        Niveau de signification du test de Mann-Kendall (défaut 0.1).
-    dependency : str
-        'INDE' (test standard), 'AR1' (Hamed & Rao 1998) ou 'LTP'
-        (Hamed 2008 ; prévu pour des séries annuelles).
-    suffix : list[str] | None
-        Suffixes de noms de variables (QA_obs, QA_sim). Sert à retrouver
-        le nom de base : colonne de sortie 'variable_no_suffix',
-        regroupement des extrêmes, et repli de `relative` sur le nom de
-        base. Le suffixe est retiré en FIN de nom uniquement.
-    suffix_delimiter : str
-        Délimiteur préfixant chaque suffixe (défaut '_').
-    relative : bool | dict[str, bool]
-        La variable s'exprime-t-elle en % de sa moyenne ? Bool global ou
-        dict par variable, auquel cas TOUTES les variables doivent être
-        couvertes (par leur nom exact ou leur nom de base), sinon
-        ValueError. Pilote a_relative et change_relative.
-    extremes_include_non_significant : bool
-        Si False, seules les séries significatives (h=True) contribuent
-        aux bornes de quantiles.
-    extremes_from_series : list | None
-        Sous-ensemble d'identifiants de séries contribuant aux bornes de
-        quantiles (None = toutes). Ne filtre pas les lignes de sortie.
-    extremes_pool_suffixes : bool
-        Si True, les bornes de quantiles sont mises en commun entre les
-        variantes d'une même variable de base (QA_obs et QA_sim partagent
-        leurs bornes, donc sont comparables). Défaut False : chaque
-        variante a ses propres bornes. Sans effet si suffix est None.
-    period : list | None
-        [début, fin] ou liste de paires pour restreindre l'analyse.
-    period_change : list | None
-        Exactement 2 paires [début, fin] : déclenche le calcul du
-        changement de moyenne entre les deux sous-périodes.
-    extremes_prob : float
-        Probabilité des bornes de quantiles extrêmes (défaut 0.01).
-    advanced_stats : bool
-        Si True, ajoute les colonnes 'stat' et 'dep' à la sortie.
-    seed : int | None
-        LTP uniquement : graine du tirage aléatoire qui départage les
-        ex-æquo lors de l'estimation du coefficient de Hurst. None
-        (défaut) : tirage non déterministe, comme en R. Un entier rend
-        l'appel reproductible pour des données identiques. Sans effet
-        pour INDE/AR1 et pour des séries sans ex-æquo.
-    verbose : bool
-        Messages de progression.
+    data : pandas.DataFrame
+        What :func:`stase.extract` returned: one row per series and
+        date, the numeric columns being the variables to analyse.
+    level : float, default 0.1
+        Significance level of the Mann-Kendall test.
+    dependency : {"INDE", "AR1", "LTP"}, default "INDE"
+        ``"INDE"`` is the standard test, ``"AR1"`` accounts for
+        first-order autocorrelation (Hamed & Rao, 1998), and ``"LTP"``
+        for long-term persistence (Hamed, 2008), which is meant for
+        yearly series.
+    suffix : list of str, optional
+        Suffixes carried by the variable names (``QA_obs``, ``QA_sim``).
+        They are what lets the base name be recovered, for the
+        ``variable_no_suffix`` output column, for grouping the extremes,
+        and for falling back on the base name when reading ``relative``.
+        A suffix is stripped from the END of a name only.
+    suffix_delimiter : str, default "_"
+        Delimiter introducing each suffix.
+    relative : bool or dict, default True
+        Whether a variable is expressed as a percentage of its own mean.
+        A single bool, or a dict per variable, in which case EVERY
+        variable must be covered, by its exact name or by its base name,
+        otherwise ValueError. Drives ``a_relative`` and
+        ``change_relative``.
+    extremes_include_non_significant : bool, default True
+        Set to False, only the significant series (``h`` true)
+        contribute to the quantile bounds.
+    extremes_from_series : list, optional
+        Subset of series identifiers contributing to the quantile
+        bounds. ``None`` means all of them. It does not filter the
+        output rows.
+    extremes_pool_suffixes : bool, default False
+        Pool the quantile bounds across the variants of one base
+        variable, so that ``QA_obs`` and ``QA_sim`` share their bounds
+        and are comparable. Left False, each variant gets its own. No
+        effect when ``suffix`` is None.
+    period : list, optional
+        ``[start, end]``, or a list of such pairs, to restrict the
+        analysis.
+    period_change : list, optional
+        Exactly two ``[start, end]`` pairs. Triggers the computation of
+        the change in mean between the two sub-periods.
+    extremes_prob : float, default 0.01
+        Probability of the extreme quantile bounds.
+    advanced_stats : bool, default False
+        Add the ``stat`` and ``dep`` columns to the output.
+    seed : int, optional
+        LTP only: seed of the random draw that breaks ties while
+        estimating the Hurst coefficient. ``None`` draws
+        non-deterministically, as R does; an integer makes the call
+        reproducible for identical data. No effect for INDE and AR1, nor
+        for series without ties.
+    verbose : bool, default False
+        Print the progress of the computation.
 
-    Sortie
-    ------
-    DataFrame trié par (identifiant, variable). Chaque indicateur existe
-    en deux colonnes d'unités DISTINCTES, jamais interchangeables :
-    l'absolue est toujours renseignée, la relative vaut NaN quand la
-    variable n'est pas relative.
+    Returns
+    -------
+    pandas.DataFrame
+        Sorted by identifier and variable. Every indicator exists in two
+        columns of DISTINCT units, never interchangeable: the absolute
+        one is always filled, the relative one is NaN when the variable
+        is not a relative one.
 
-        {id}, variable, [variable_no_suffix], level,
-        h          test significatif (booléen nullable, NA si moins de
-                   3 valeurs valides), p
-        a          pente de Sen, en unité de la variable par pas de temps
-        a_min/max  bornes de quantiles de a, même unité
-        b          ordonnée à l'origine
-        period_start, period_end, mean_period
-        a_relative         pente en % de mean_period, ou NaN
-        a_relative_min/max bornes de quantiles de a_relative, ou NaN
+        ``{id}``, ``variable``, ``[variable_no_suffix]``, ``level``,
+        then:
 
-      avec period_change :
-        period_change_start_1/end_1/start_2/end_2,
-        mean_period_change_1/2
-        change                     mean_2 - mean_1, unité de la variable
-        change_min/max             bornes de quantiles de change
-        change_relative            même écart en % de mean_1, ou NaN
-        change_relative_min/max    bornes de quantiles, ou NaN
+        - ``h``, whether the test is significant (nullable boolean, NA
+          under three valid values), and ``p``
+        - ``a``, the Sen slope, in the unit of the variable per time step
+        - ``a_min``, ``a_max``, quantile bounds of ``a``, same unit
+        - ``b``, the intercept
+        - ``period_start``, ``period_end``, ``mean_period``
+        - ``a_relative``, the slope as a percentage of ``mean_period``,
+          or NaN, with ``a_relative_min`` and ``a_relative_max``
 
-      avec advanced_stats : stat, dep.
+        With ``period_change``: ``period_change_start_1``, ``end_1``,
+        ``start_2``, ``end_2``, ``mean_period_change_1`` and ``_2``,
+        ``change`` (``mean_2 - mean_1``, in the unit of the variable)
+        with its bounds, and ``change_relative`` (the same difference as
+        a percentage of ``mean_1``, or NaN) with its bounds.
+
+        With ``advanced_stats``: ``stat`` and ``dep``.
     """
     # ── 1. Validate ───────────────────────────────────────────────────────────
     if not isinstance(data, pd.DataFrame):

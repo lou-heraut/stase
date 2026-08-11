@@ -61,7 +61,35 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.2.
+Rien depuis la 0.6.3.
+
+## 0.6.3 (2026-08-11)
+
+### Modifié
+
+- **L'API publique se documente en anglais, en sections NumPy
+  (2026-08-11).** `help(stase.extract)` répondait en français, sous des
+  titres de sections français (« Paramètres », « Sortie »), alors que le
+  README, le dépôt et la publication scientifique sont en anglais. Le
+  lecteur changeait donc de langue au moment précis où il passait de la
+  promesse à l'usage. Les neuf noms de `__all__` sont convertis :
+  `extract`, `trend`, `Adaptive`, `general_mann_kendall`,
+  `field_significance_fdr` et leurs quatre alias hérités du R.
+
+  **Les sections ne sont pas une coquetterie de forme.** Un paragraphe
+  libre oblige le lecteur à chercher le sens de `sampling_period` dans
+  une phrase, et aucun générateur de documentation ne sait le rendre en
+  tableau. `field_significance_fdr` était déjà écrite ainsi : c'est
+  désormais la règle, pas l'exception.
+
+  **La machinerie interne n'est pas touchée**, et c'est délibéré : elle
+  s'adresse à qui ouvre le fichier, pas à qui appelle le paquet.
+
+  `tests/test_docstrings.py` mesure les deux règles au lieu de compter
+  sur la mémoire, et le CLAUDE.md les énonce. Même fichier, mêmes
+  règles, dans card : les deux paquets s'installent et se lisent
+  ensemble, une norme qui s'arrêterait à la frontière de l'un ne
+  servirait à rien.
 
 ## 0.6.2 (2026-08-11)
 
