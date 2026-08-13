@@ -429,19 +429,19 @@ def GeneralMannKendall(X, level=0.1, time_dependency_option='INDE',
     do_detrending : bool, default True
         Remove the trend before estimating the dependency structure.
     show_advance_stat : bool, default False
-        Also return the ``stat`` and ``dep`` diagnostics.
+        Also return the `stat` and `dep` diagnostics.
     verbose : bool, default False
         Print the progress of the computation.
     rng : int or numpy.random.Generator, optional
         LTP only: source of the random draw that breaks ties, see
-        ``randomizedNormalScore``. No effect for INDE and AR1, nor for
+        `randomizedNormalScore`. No effect for INDE and AR1, nor for
         series without ties.
 
     Returns
     -------
     dict
-        ``{"level", "h", "p", "a"}``, plus ``"stat"`` and ``"dep"`` when
-        ``show_advance_stat`` is set. Mirrors the tibble the R function
+        `{"level", "h", "p", "a"}`, plus `"stat"` and `"dep"` when
+        `show_advance_stat` is set. Mirrors the tibble the R function
         returns.
     """
     res = generalMannKendall_hide(

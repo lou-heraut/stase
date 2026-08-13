@@ -93,6 +93,12 @@ docs/img/         # figures du README (déposées manuellement)
    ensemble, une norme qui s'arrêterait à la frontière de l'un ne
    servirait à rien. La machinerie interne écrit dans la langue qu'elle
    veut, elle s'adresse à qui ouvre le fichier.
+   **Le balisage du corps est du MARKDOWN**, pour tout le paquet : un
+   accent grave SIMPLE pour du code, aucun rôle `:func:`. Le style NumPy
+   est né pour Sphinx et sa syntaxe en ligne est du reST ; un
+   générateur moderne découpe les sections NumPy puis rend le corps en
+   Markdown, et le reST y ressort en clair. Normalisé le 2026-08-13 dans
+   les deux paquets, mesuré côté card par `tests/test_docstrings.py`.
 5. **Versions.** On n'y touche pas au quotidien. Chaînage à ne pas
    rater, rappelé ici exprès : une modif notable se note sous
    `## Non publié` du CHANGELOG ; publier se fait par

@@ -61,7 +61,15 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.3.
+### Modifié
+
+- **Les docstrings s'écrivent en Markdown (2026-08-13).** Le style NumPy
+  est né pour Sphinx, et sa syntaxe en ligne est du reStructuredText :
+  doubles accents graves, rôles `:func:`. Un générateur moderne découpe
+  les sections NumPy puis rend le corps en Markdown, où ce balisage
+  ressort en clair au milieu des phrases. Cent quatorze occurrences
+  normalisées, aucun texte modifié par ailleurs. La règle est dans le
+  CLAUDE.md, et card, qui publie ses docstrings sur un site, la mesure.
 
 ## 0.6.3 (2026-08-11)
 

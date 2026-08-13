@@ -55,25 +55,25 @@ class Adaptive:
     """A sampling window computed per series.
 
     The hydrological year of each series starts on the first day of the
-    month where ``func`` is reached over the inter-annual monthly means
-    of column ``col``.
+    month where `func` is reached over the inter-annual monthly means
+    of column `col`.
 
     Parameters
     ----------
     func : callable
-        Where the year should start, typically ``np.nanmax`` for low
-        flows and ``np.nanmin`` for high flows.
+        Where the year should start, typically `np.nanmax` for low
+        flows and `np.nanmin` for high flows.
     col : str
         Column the monthly means are computed on.
     default : str, default "09-01"
-        Fallback window, ``"MM-DD"``, used when the series is empty or
+        Fallback window, `"MM-DD"`, used when the series is empty or
         all-NaN.
 
     Returns
     -------
     Adaptive
-        To be passed as the ``sampling_period`` of
-        :func:`stase.extract`.
+        To be passed as the `sampling_period` of
+        `stase.extract`.
     """
     func: Callable
     col: str
@@ -1133,46 +1133,46 @@ def process_extraction(
         and one or more numeric columns. Columns are recognised by their
         TYPE, never by their name.
     func : callable or dict
-        A callable, or ``{name: callable | tuple}`` for several
-        variables at once. A tuple reads ``(fn, *columns_or_literals,
-        kwargs?, is_date?)``. A bool in LAST position is always
-        ``is_date``: ``(fn, "Q", True)`` means ``is_date=True``; to pass
-        a positional boolean literal to ``fn``, add the kwargs dict
-        after it, so that ``(fn, "Q", True, {})`` gives ``fn(Q, True)``.
+        A callable, or `{name: callable | tuple}` for several
+        variables at once. A tuple reads `(fn, *columns_or_literals,
+        kwargs?, is_date?)`. A bool in LAST position is always
+        `is_date`: `(fn, "Q", True)` means `is_date=True`; to pass
+        a positional boolean literal to `fn`, add the kwargs dict
+        after it, so that `(fn, "Q", True, {})` gives `fn(Q, True)`.
         A str kwarg equal to a column name of the data becomes a
         reference: that column, aligned on the group, is handed to
-        ``fn``, as in ``{"lim": "upLim"}``. ``verbose=True`` shows which
+        `fn`, as in `{"lim": "upLim"}`. `verbose=True` shows which
         ones were resolved that way.
     time_step : str, default "year"
-        One of ``"year"``, ``"year-month"``, ``"month"``,
-        ``"year-season"``, ``"season"``, ``"yearday"``, ``"none"``.
+        One of `"year"`, `"year-month"`, `"month"`,
+        `"year-season"`, `"season"`, `"yearday"`, `"none"`.
     sampling_period : str or list or Adaptive, optional
-        A window, ``"MM-DD"`` or ``["MM-DD", "MM-DD"]``, for the
-        ``"year"`` and ``"none"`` steps, or ``Adaptive(func, col)`` for
+        A window, `"MM-DD"` or `["MM-DD", "MM-DD"]`, for the
+        `"year"` and `"none"` steps, or `Adaptive(func, col)` for
         a window computed per series.
     period : list of str, optional
-        ``[start, end]``, to restrict the record.
+        `[start, end]`, to restrict the record.
     max_na_pct : float, optional
         Gap tolerance, in percent. Beyond it, the value of the group is
         NaN.
     drop_na_pct : bool, default True
-        Drop the ``na_pct`` columns from the output.
+        Drop the `na_pct` columns from the output.
     name : str, default "X"
-        Name of the output column. Only used when ``func`` is a bare
+        Name of the output column. Only used when `func` is a bare
         callable rather than a dict.
     seasons : list of str, optional
-        Seasonal split, such as ``["DJF", "MAM", "JJA", "SON"]``.
+        Seasonal split, such as `["DJF", "MAM", "JJA", "SON"]`.
     compress : bool, default False
         Pivot from long to wide, months or seasons becoming columns.
-        Available for the ``"month"``, ``"year-month"``, ``"season"``
-        and ``"year-season"`` steps.
+        Available for the `"month"`, `"year-month"`, `"season"`
+        and `"year-season"` steps.
     expand : bool, default False
-        Return ``{name: DataFrame}`` instead of a single DataFrame.
+        Return `{name: DataFrame}` instead of a single DataFrame.
     suffix : list of str, optional
-        Suffixes applied as a cartesian product with ``func``, to repeat
+        Suffixes applied as a cartesian product with `func`, to repeat
         one computation over several columns. With
-        ``func={"QA": (np.nanmean, "Q")}`` and ``suffix=["obs", "sim"]``
-        you get ``QA_obs`` from ``Q_obs`` and ``QA_sim`` from ``Q_sim``.
+        `func={"QA": (np.nanmean, "Q")}` and `suffix=["obs", "sim"]`
+        you get `QA_obs` from `Q_obs` and `QA_sim` from `Q_sim`.
         A column reference is suffixed only when the suffixed column
         exists, otherwise the base column is kept: one computation can
         therefore vary a single argument, a threshold for instance,
@@ -1187,7 +1187,7 @@ def process_extraction(
         per series. They are set aside at detection time, so that the
         axis and the identifier still fall out by elimination; they can
         be referenced by a function whatever their dtype; they are kept
-        out of the numeric channel (``value_cols``, ``max_na_years``);
+        out of the numeric channel (`value_cols`, `max_na_years`);
         they can be suffixed; and they are KEPT in the output so that
         they survive a chain of processes. A value that is not constant
         per series raises ValueError.
@@ -1196,7 +1196,7 @@ def process_extraction(
         first. Left False, a duplicate raises an explicit ValueError
         rather than being silently resolved.
     keep : str or list of str, optional
-        ``None`` by default. ``"all"`` returns as many rows as the
+        `None` by default. `"all"` returns as many rows as the
         input, the aggregated value sitting on the first row of each
         group. A list names the columns to carry through.
     max_na_years : float, optional
@@ -1210,9 +1210,9 @@ def process_extraction(
     -------
     pandas.DataFrame or dict
         The output date column carries the name of the input date
-        column. Structural columns are snake_case (``month``,
-        ``season``, ``year_season``, ``yearday``), and the gap column is
-        ``na_pct``.
+        column. Structural columns are snake_case (`month`,
+        `season`, `year_season`, `yearday`), and the gap column is
+        `na_pct`.
     """
     # Pont vers les noms internes historiques (hérités de la conversion R) :
     # la logique interne est validée par les goldens, on ne la renomme pas.
