@@ -168,6 +168,31 @@ def test_series_with_too_few_values_gives_na():
     assert pd.isna(t.loc["COURT", "p"])
 
 
+def test_n_counts_the_values_used_not_the_span():
+    # Série trouée : les bornes de période prennent la colonne de DATES
+    # quels que soient les NaN, donc `n` est la seule colonne à dire sur
+    # combien de points le test a porté. Sans trou, le test ne prouverait
+    # rien : les trois nombres coïncideraient.
+    data = _yearly(n=30, ids=("TROUEE",))
+    data.loc[10:17, "X"] = np.nan                  # huit années vides
+    t = process_trend(data, verbose=False)
+    assert int(t.n.iloc[0]) == 22
+    assert len(data) == 30                         # ni le compte d'entrée
+    span = t.period_end.iloc[0].year - t.period_start.iloc[0].year + 1
+    assert span == 30                              # ni l'étendue annoncée
+
+
+def test_n_is_counted_window_by_window():
+    # Plusieurs fenêtres : chacune donne sa ligne, donc son propre `n`.
+    data = _yearly(n=30, ids=("S1",))
+    data.loc[0:4, "X"] = np.nan                    # cinq années vides au début
+    t = process_trend(data,
+                      period=[["1990-01-01", "2004-12-31"],
+                              ["2005-01-01", "2019-12-31"]],
+                      verbose=False).sort_values("period_start")
+    assert list(t.n) == [10, 15]
+
+
 def test_h_is_nullable_boolean():
     data = pd.concat([
         _yearly(n=30, ids=("LONG",)),
@@ -224,7 +249,7 @@ def test_period_trend_outside_data_returns_typed_empty():
     assert len(t) == 0
     # colonnes standard présentes : les accès aval fonctionnent
     for c in ("ID", "variable", "h", "p", "a", "b",
-              "period_start", "a_relative_min"):
+              "period_start", "n", "a_relative_min"):
         assert c in t.columns
     assert t.h.dtype == "boolean"
     assert len(t[t.h == True]) == 0                      # noqa: E712

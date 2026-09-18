@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "name": "stase",
   "description": "Moteur d'agrégation de séries journalières hydroclimatiques et d'analyse de stationnarité : Mann-Kendall généralisé (INDE, AR1, LTP) et pente de Sen. Port Python du paquet R EXstat.",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "datePublished": "2026-09-18",
   "codeRepository": "https://github.com/lou-heraut/stase",
   "issueTracker": "https://github.com/lou-heraut/stase/issues",

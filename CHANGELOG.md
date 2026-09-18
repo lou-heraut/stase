@@ -61,7 +61,42 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.4.
+Rien depuis la 0.6.5.
+
+## 0.6.5 (2026-09-18)
+
+### Ajouté
+
+- **La tendance dit sur combien de points elle a porté (2026-09-18).**
+  `trend` rend une colonne `n` de plus : le nombre de valeurs
+  réellement employées par le test, c'est-à-dire les valeurs présentes.
+  Elle ne se déduisait d'aucune autre colonne. `period_start` et
+  `period_end` prennent le minimum et le maximum de la colonne de DATES
+  quels que soient les manquants, pour reproduire le R : une série de
+  quarante ans dont huit années sont vides annonçait donc la même
+  période qu'une série pleine, alors qu'une pente sur douze points ne se
+  lit pas comme une pente sur cinquante-cinq.
+
+  `n` est le symbole de la taille d'échantillon, et il est sans
+  concurrent : la table ne portait aucun autre décompte. Il se place
+  entre les bornes de période et `mean_period`, qui disent alors
+  l'étendue, le nombre de points dedans, puis leur moyenne. La colonne
+  suit chaque fenêtre quand l'analyse en demande plusieurs, et le cadre
+  de sortie vide la porte comme les autres, sans quoi les accès aval
+  tomberaient sur zéro ligne mal typée. Le chemin `period_change`, qui
+  compare deux moyennes et ne teste aucune tendance, n'est pas touché :
+  ses deux moyennes ont leurs propres effectifs, et ce serait une autre
+  décision.
+
+  `tests/test_trend.py` la mesure sur une série TROUÉE et sur deux
+  fenêtres : sans trou, les trois nombres coïncideraient et le test ne
+  prouverait rien.
+
+  Demandé par l'audit de migration de MAKAHO, qui marque les chroniques
+  trop courtes et perd la donnée journalière en se branchant sur le
+  service : le seuil reste son choix éditorial, l'ingrédient manquait
+  ici. Vérifié le jour même : la colonne traverse `card.trend` sans
+  qu'aucun code de `card` ne la connaisse.
 
 ## 0.6.4 (2026-09-18)
 

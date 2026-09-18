@@ -97,6 +97,13 @@ def _mk_series(grp, var, date_col, level, option, advanced_stats, to_norm,
         "b":               b,
         "period_start":    period_start,
         "period_end":      period_end,
+        # Le nombre de points sur lesquels le test a réellement porté,
+        # et il ne se déduit d'aucune autre colonne : les bornes de
+        # période prennent le min et le max de la colonne de DATES quels
+        # que soient les NaN des valeurs, pour reproduire R (cf. plus
+        # haut). Une série de 56 ans dont 20 années sont vides annonce
+        # donc la même période qu'une série pleine.
+        "n":               int(valid.sum()),
         # Toujours calculée : la moyenne de la période est définie que la
         # variable soit relative ou non.
         "mean_period":     mean_val if np.isfinite(mean_val) else np.nan,
@@ -165,6 +172,7 @@ def _empty_trend_frame(id_cols, has_suffix, has_change, advanced_stats):
     cols["b"] = pd.Series(dtype="float64")
     cols["period_start"] = pd.Series(dtype="datetime64[ns]")
     cols["period_end"] = pd.Series(dtype="datetime64[ns]")
+    cols["n"] = pd.Series(dtype="int64")
     for c in ("a_min", "a_max", "mean_period", "a_relative",
               "a_relative_min", "a_relative_max"):
         cols[c] = pd.Series(dtype="float64")
@@ -274,7 +282,12 @@ def process_trend(
         - `a`, the Sen slope, in the unit of the variable per time step
         - `a_min`, `a_max`, quantile bounds of `a`, same unit
         - `b`, the intercept
-        - `period_start`, `period_end`, `mean_period`
+        - `period_start`, `period_end`, the span of the sample, `n`, how
+          many values the test actually used, and `mean_period`, their
+          mean. `n` is not the number of time steps between the two
+          bounds: those come from the date column whatever the missing
+          values, so a series with gaps spans the same period as a full
+          one
         - `a_relative`, the slope as a percentage of `mean_period`,
           or NaN, with `a_relative_min` and `a_relative_max`
 
