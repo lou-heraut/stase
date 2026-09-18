@@ -1233,19 +1233,11 @@ def process_extraction(
             f"data doit être un DataFrame pandas, reçu {type(data).__name__}."
         )
 
-    if isinstance(sampling_period, Adaptive):
-        if expand:
-            raise ValueError(
-                "sampling_period adaptatif incompatible avec expand=True."
-            )
-        _kw = dict(func=funct, time_step=time_step,
-                   period=period, max_na_pct=NApct_lim,
-                   drop_na_pct=rmNApct, name=nameEX, seasons=Seasons,
-                   compress=compress, expand=expand, suffix=suffix,
-                   suffix_delimiter=suffix_delimiter, param_cols=param_cols,
-                   drop_duplicates=rm_duplicates, keep=keep,
-                   max_na_years=NAyear_lim, verbose=verbose)
-        return _process_adaptive(data, sampling_period, _kw)
+    if isinstance(sampling_period, Adaptive) and expand:
+        # L'aiguillage lui-même est plus bas, une fois la donnée préparée.
+        raise ValueError(
+            "sampling_period adaptatif incompatible avec expand=True."
+        )
 
     VALID = {"year", "year-month", "month", "year-season", "season", "yearday", "none"}
     if time_step not in VALID:
@@ -1627,6 +1619,25 @@ def process_extraction(
 
     # (données déjà triées en amont ; period/NAyear préservent l'ordre)
     data = data.reset_index(drop=True)
+
+    # --- sampling_period adaptatif ---
+    # La fenêtre se calcule ICI, sur la donnée qui servira vraiment :
+    # grille, max_na_years et coupe de période sont déjà passés. C'est
+    # l'ordre d'EXstat, où fix_sampling_period reçoit la donnée déjà
+    # filtrée, et le seul défendable : une fenêtre calculée au-delà de la
+    # période demandée ferait dépendre le résultat de données que
+    # personne n'a demandées. L'appel récursif ne rejoue donc ni la coupe
+    # ni max_na_years, qui tronquerait une seconde fois, sur une lacune
+    # que la coupe vient de créer en tête de série.
+    if isinstance(sampling_period, Adaptive):
+        return _process_adaptive(data, sampling_period, dict(
+            func=funct, time_step=time_step, period=None,
+            max_na_pct=NApct_lim, drop_na_pct=rmNApct, name=nameEX,
+            seasons=Seasons, compress=compress, expand=expand,
+            suffix=suffix, suffix_delimiter=suffix_delimiter,
+            param_cols=param_cols, drop_duplicates=rm_duplicates,
+            keep=keep_cols if keep_cols is not None else keep,
+            max_na_years=None, verbose=verbose))
 
     # Snapshot avant que les _extract_* ajoutent des colonnes internes (_hy, _ym…)
     data_for_keep = data.copy() if keep == "all" else None
@@ -2450,7 +2461,11 @@ def _extract_none(data, id_col, date_col, col_name, funct, funct_kwargs, skip_na
 def _process_adaptive(data: pd.DataFrame, spec: Adaptive, kwargs: dict):
     """sampling_period adaptatif : calcule le mois de début par série puis
     ré-appelle process_extraction par groupe de séries partageant le même
-    mois (équivalent fix_sampling_period + boucle par Code en R)."""
+    mois (équivalent fix_sampling_period + boucle par Code en R).
+
+    `data` arrive PRÉPARÉ (grille, max_na_years, coupe de période) et
+    `kwargs` neutralise ces étapes pour l'appel récursif : le mois se
+    calcule sur la donnée qui servira vraiment."""
     date_col, id_col, _ = _detect_columns(data, kwargs.get("param_cols") or ())
     if date_col is None:
         raise ValueError(

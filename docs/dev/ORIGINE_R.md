@@ -15,6 +15,12 @@ et les références de cette validation sont commitées dans `tests/data/`
 - 5 scénarios process_trend complets : concordance à 1e-10 ;
 - 11 scénarios d'extraction couvrant les 7 time_steps.
 
+Cette validation porte sur des chroniques qui ne débordent pas de la
+période demandée : l'ORDRE des étapes de préparation face à une fenêtre
+d'échantillonnage adaptative n'y était donc pas couvert, et une vraie
+divergence s'y cachait, trouvée et corrigée le 2026-09-18 (détail dans
+`CHANGELOG.md`). Une parité mesurée dit ce qu'elle a mesuré.
+
 L'historique détaillé de la conversion (choix d'implémentation,
 optimisations, phases de validation) est conservé dans
 [archive/CONVERSION_R.md](archive/CONVERSION_R.md), et le harnais de

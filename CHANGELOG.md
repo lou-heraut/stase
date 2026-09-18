@@ -61,6 +61,52 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+Rien depuis la 0.6.4.
+
+## 0.6.4 (2026-09-18)
+
+### Corrigé
+
+- **La fenêtre adaptative se calculait avant la coupe de période
+  (2026-09-18).** `process_extraction` aiguillait vers le chemin
+  adaptatif en toute première instruction : le mois de départ de l'année
+  hydrologique sortait donc de la chronique ENTIÈRE, avant la grille,
+  avant `max_na_years` et avant le filtre `period`, alors qu'EXstat le
+  calcule sur la donnée déjà tronquée et déjà coupée, son
+  `fix_sampling_period` recevant le `data` filtré. Divergence ni voulue
+  ni documentée, née du portage.
+
+  **L'ordre est désormais celui du R** : grille, `max_na_years`, coupe
+  de période, puis mois. `max_na_years` cherche la plus longue portion
+  exploitable de la chronique, c'est son rôle et il passe d'abord ; la
+  fenêtre, elle, se calcule sur les données qui vont réellement servir.
+  Une fenêtre calculée au-delà de la période demandée fait dépendre le
+  résultat de données que personne n'a demandées, et rend deux séries
+  incomparables selon la profondeur d'historique de chacune. Ce n'est
+  pas plus stable, c'est plus opaque, puisque la chronique s'allonge et
+  se fait réviser.
+
+  **Deux portes, pas une.** Tout appel qui passe une `period` alors que
+  la donnée déborde, mais aussi, sans aucune `period`, toute série dont
+  une lacune dépasse `max_na_years` : la portion écartée pesait encore
+  sur le choix du mois.
+
+  **Ce que ça changeait**, mesuré sur 232 chroniques Hub'Eau (RRSE,
+  1968 à 2026-07-27) : 7 séries changeaient de mois de départ, 3
+  changeaient de valeur, d'un écart médian de 170 % sur `QJXA` et de
+  46 % sur `tQJXA`, qui est une date, donc une variable circulaire dont
+  le signe de tendance dépend du point de coupe. Un maximum de moyennes
+  mensuelles est franc et ne bouge pas ; un minimum est plat, plusieurs
+  mois d'été se tenant à quelques pour cent, si bien que quelques
+  années de plus font basculer l'argument du minimum : la famille des
+  hautes eaux était la plus exposée. Les seuils ne l'étaient pas, le
+  filtre s'appliquant à chaque process, donc leur entrée était déjà
+  coupée.
+
+  `tests/test_extraction.py` mesure les deux portes sur une série qui
+  déborde de la période demandée et sur une série à longue lacune :
+  sans ce débordement, un test d'ordre ne prouverait rien.
+
 ### Modifié
 
 - **Les docstrings s'écrivent en Markdown (2026-08-13).** Le style NumPy

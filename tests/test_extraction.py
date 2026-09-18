@@ -77,6 +77,49 @@ def test_adaptive_starts_at_max_month():
     assert all(s.endswith("-01") for s in starts.values())
 
 
+def _shifting_lows(pivot="1968-01-01"):
+    """Chronique 1965-2000 dont le mois le plus bas dépend de la part
+    regardée : août sur la chronique entière, septembre à partir de
+    `pivot`. Sans ce débordement, un test d'ordre ne prouve rien."""
+    dates = pd.date_range("1965-01-01", "2000-12-31", freq="D")
+    q = np.full(len(dates), 20.0)
+    early = dates < pd.Timestamp(pivot)
+    q[(dates.month == 8) & early] = 2.0
+    q[(dates.month == 8) & ~early] = 10.2
+    q[dates.month == 9] = 10.0
+    return pd.DataFrame({"date": dates, "Q": q, "id": "S1"})
+
+
+def test_adaptive_window_ignores_data_outside_the_period():
+    data = _shifting_lows()
+    kw = dict(func={"QJXA": (np.nanmax, "Q")}, time_step="year",
+              sampling_period=Adaptive(np.nanmin, "Q"))
+    entier = process_extraction(data, **kw)
+    moteur = process_extraction(data, period=["1968-01-01", "2000-12-31"],
+                                **kw)
+    amont = process_extraction(data[data.date >= "1968-01-01"], **kw)
+    # la chronique entière donne bien une autre fenêtre : sans cet écart,
+    # les deux assertions suivantes passeraient toutes seules
+    assert entier.date.dt.strftime("%m-%d").iloc[0] == "08-01"
+    assert moteur.date.dt.strftime("%m-%d").iloc[0] == "09-01"
+    # couper en amont ou confier la période au moteur : même résultat
+    pd.testing.assert_frame_equal(moteur, amont)
+
+
+def test_adaptive_window_computed_after_nayear_lim():
+    data = _shifting_lows(pivot="1981-01-01")
+    hole = (data.date >= "1969-01-01") & (data.date <= "1980-12-31")
+    data.loc[hole, "Q"] = np.nan          # 12 ans > max_na_years
+    kw = dict(func={"QJXA": (np.nanmax, "Q")}, time_step="year",
+              sampling_period=Adaptive(np.nanmin, "Q"))
+    assert process_extraction(
+        data, **kw).date.dt.strftime("%m-%d").iloc[0] == "08-01"
+    # la troncature écarte la portion d'avant la lacune : la fenêtre se
+    # calcule sur ce qui reste, pas sur ce qui a été écarté
+    r = process_extraction(data, max_na_years=10, **kw)
+    assert r.date.dt.strftime("%m-%d").iloc[0] == "09-01"
+
+
 # ── sorties dynamiques time_step 'none' ─────────────────────────────────────
 
 def test_transform_full_length():
