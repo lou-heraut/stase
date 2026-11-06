@@ -5,14 +5,6 @@
 
 # Feuille de route de stase (mise à jour 2026-11-06)
 
-## Dans EXstat, un geste de l'utilisateur (2026-11-06)
-
-Les en-têtes de `R/process_extraction.R` et `R/process_trend.R` nomment
-encore Éric Sauquet et Jean-Philippe Vidal, qui ont aidé à la conception
-sans écrire de code (règle commune : `dev/decisions.md` de card, « Qui est
-auteur »). Retirés de l'en-tête Python ; dans le dépôt R, resté sans
-intervention de l'IA, c'est à l'utilisateur de le faire.
-
 ## `sampling_period` par série via dictionnaire
 
 Fonctionnalité listée à l'époque de la conversion, jamais faite parce
