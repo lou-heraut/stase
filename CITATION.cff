@@ -29,8 +29,8 @@ authors:
     given-names: "Jean-Philippe"
     email: "jean-philippe.vidal@inrae.fr"
     affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
-version: "0.6.5"
-date-released: "2026-09-18"
+version: "0.6.6"
+date-released: "2026-11-06"
 repository-code: "https://github.com/lou-heraut/stase"
 license: "GPL-3.0-or-later"
 keywords:

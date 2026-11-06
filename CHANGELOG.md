@@ -61,6 +61,14 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
+Rien depuis la 0.6.6.
+
+## 0.6.6 (2026-11-06)
+
+Première publication sur PyPI, pour réserver le nom : `pip install stase`.
+Le code est celui de la 0.6.5 ; la version existe pour que le tag désigne
+exactement ce que porte PyPI, dont la page est le README.
+
 ### Documentation
 
 - **Les documents de développement prennent la structure commune aux
