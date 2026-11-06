@@ -78,7 +78,7 @@ def test_sc1_inde_normalise(raw):
 
 
 def test_sc2_ar1_no_normalise(raw):
-    """relative=False : divergence assumée avec R (cf. ORIGINE_R.md).
+    """relative=False : divergence assumée avec R (cf. dev/r-origin.md).
 
     R recopiait la pente absolue dans a_normalise, si bien qu'une même
     colonne portait des unités différentes selon la variable. Ici

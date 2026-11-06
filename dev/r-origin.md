@@ -23,9 +23,9 @@ divergence s'y cachait, trouvée et corrigée le 2026-09-18 (détail dans
 
 L'historique détaillé de la conversion (choix d'implémentation,
 optimisations, phases de validation) est conservé dans
-[archive/CONVERSION_R.md](archive/CONVERSION_R.md), et le harnais de
+[plans/2026-07-15_r-conversion.md](plans/2026-07-15_r-conversion.md), et le harnais de
 validation croisée d'origine dans
-[archive/harnais_R/](archive/harnais_R/).
+[r-harness/](r-harness/).
 
 ## Divergences intentionnelles avec le R
 
@@ -115,4 +115,4 @@ L'API canonique est `stase.extract` / `stase.trend`. Les noms de
 fonctions du R restent valides en alias (`process_extraction`,
 `process_trend`, `GeneralMannKendall`, `fieldSignificance_FDR`), mais
 les paramètres et colonnes de sortie utilisent les nouveaux noms partout
-(renommage sec) : table complète dans [RENAMING_PY.md](RENAMING_PY.md).
+(renommage sec) : table complète dans [renaming.md](renaming.md).

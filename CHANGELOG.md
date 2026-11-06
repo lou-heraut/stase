@@ -354,7 +354,7 @@ Rien depuis la 0.6.5.
   convertissait tout le tableau, emplacements NaN compris, avant de les
   masquer. Les valeurs étaient correctes, le bruit ne l'était pas.
 
-Détail des divergences : `docs/dev/ORIGINE_R.md`. Tests :
+Détail des divergences : `dev/r-origin.md`. Tests :
 `tests/test_suffix.py` (9 scénarios), `tests/test_trend.py` (scénarios 2
 et 4, qui continuent de vérifier la parité R sur `a`, `p` et `b`).
 
@@ -468,6 +468,6 @@ Première version, port Python du paquet R
   formats ambigus restant une erreur.
 - Licence GPL-3 pour tout le dépôt.
 
-Détail : `docs/dev/ORIGINE_R.md` (origine et divergences assumées),
-`docs/dev/RENAMING_PY.md` (table des renommages),
-`docs/dev/archive/PLAN.md` (audit du 2026-07-12, clôturé).
+Détail : `dev/r-origin.md` (origine et divergences assumées),
+`dev/renaming.md` (table des renommages),
+`dev/plans/2026-07-12_audit-and-fixes.md` (audit du 2026-07-12, clôturé).

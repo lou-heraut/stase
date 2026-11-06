@@ -196,7 +196,7 @@ stase is the Python port of the R package
 [EXstat](https://github.com/lou-heraut/EXstat) (INRAE, UR RiverLy),
 validated number by number against R. The details of the validation and
 the documented divergences are in
-[docs/dev/ORIGINE_R.md](https://github.com/lou-heraut/stase/blob/main/docs/dev/ORIGINE_R.md). GPL-3 licence, authors in
+[dev/r-origin.md](https://github.com/lou-heraut/stase/blob/main/dev/r-origin.md). GPL-3 licence, authors in
 the AUTHORS file.
 
 ## Development

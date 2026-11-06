@@ -771,7 +771,7 @@ def _napct_vec(n_present: np.ndarray, n_na: np.ndarray, n_expected: np.ndarray) 
 
     Valeur exacte, non arrondie : le seuil max_na_pct se compare à la
     valeur exacte (R comparait la valeur arrondie, 3.04 % passait un
-    seuil de 3, divergence assumée, cf. docs/dev/ORIGINE_R.md).
+    seuil de 3, divergence assumée, cf. dev/r-origin.md).
     L'arrondi à 1 décimale n'existe que dans la colonne de sortie,
     via _napct_out."""
     n_valid = (n_present - n_na).astype(np.float64)
