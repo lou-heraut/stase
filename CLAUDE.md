@@ -124,11 +124,19 @@ Doctrine complète : « Versions, en cinq phrases », en tête de
   `python scripts/set_version.py --etat` donne les faits. **Le proposer
   soi-même** aussi : l'utilisateur ne le demandera pas, il l'a dit
   explicitement le 2026-08-05.
-- **Publier une version** (rare : PyPI, dépôt citable) :
+- **Publier une version** (rare) :
   `python scripts/set_version.py 0.3.0` accorde `pyproject.toml`,
   `CITATION.cff` et `codemeta.json`. Ne JAMAIS y écrire un numéro à la
   main : `tests/test_citation.py` refuse le désaccord. Puis section de
   CHANGELOG, commit, `git tag -a vX.Y.Z`, `git push --tags`.
+- **stase est sur PyPI depuis le 2026-11-06** (0.6.6, puis 0.6.7) : une
+  version publiée part aussi là-bas, sinon la page PyPI retarde.
+  `python -m build --outdir dist .` puis `twine check dist/stase-X.Y.Z*`
+  (outils installés à la demande dans `.python_env`, pas déclarés). L'envoi,
+  `twine upload dist/stase-X.Y.Z*`, est un geste de l'UTILISATEUR, dans
+  son terminal, avec un jeton limité au projet : Claude ne manipule pas
+  le jeton. Toujours nommer les fichiers de la version, `dist/` gardant
+  les précédents. Un numéro envoyé ne se réutilise jamais.
 - **SWHID** : `swh:1:rev:<hash du commit>` EST l'identifiant Software
   Heritage d'une révision git, calculable sans aucun appel d'API. Il ne
   résout que si le dépôt est archivé : fait le 2026-07-22 pour les trois,
