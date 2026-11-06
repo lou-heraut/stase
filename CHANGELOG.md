@@ -61,7 +61,16 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.7.
+### Corrigé
+
+- **Les mentions de copyright désignent qui a écrit du code
+  (2026-11-06).** L'en-tête de `extraction.py` nommait Éric Sauquet et
+  Jean-Philippe Vidal, qui ont aidé à la conception par la discussion
+  sans écrire de code : leur aide est créditée dans `AUTHORS` depuis la
+  0.6.7, et les deux lignes sont retirées, avec un renvoi d'affiliation
+  que plus aucun nom n'utilisait. Les mentions des auteurs du code R
+  d'origine, dans `tools.py`, restent. Commentaire seulement : rien ne
+  change dans le paquet.
 
 ## 0.6.7 (2026-11-06)
 

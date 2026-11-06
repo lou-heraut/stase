@@ -1,9 +1,6 @@
 # Copyright 2021-2026 Louis Héraut <louis.heraut@inrae.fr>*1
-#           2023      Éric Sauquet <eric.sauquet@inrae.fr>*1
-#                     Jean-Philippe Vidal <jean-philippe.vidal@inrae.fr>*1
 #
 # *1 INRAE, UR RiverLy, Villeurbanne, France
-# *2 INRAE, RECOVER, Aix-Marseille Université, Aix-en-Provence, France
 #
 # This file is part of the stase Python package (Python port of the
 # EXstat R package).
