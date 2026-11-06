@@ -1,15 +1,9 @@
-> **Statut : registre vivant.** Ce fichier ne contient que des pistes
-> **ouvertes**. Un chantier livré en sort et devient une entrée de
-> `CHANGELOG.md`, à la racine du dépôt, qui renvoie au document
-> expliquant le détail.
+> **Statut : ce qui reste à faire, et seulement cela,** pour le moteur.
+> Ce qui est fait en sort et devient une entrée de `CHANGELOG.md`, qui
+> renvoie au document expliquant le détail. Un point devenu trop lourd
+> ouvre un plan daté dans `dev/plans/`.
 
-# CHANTIERS : pistes ouvertes (ouvert le 2026-07-22)
-
-## Aligner les dépôts sur une même hygiène de projet (2026-11-06)
-
-Campagne commune aux quatre dépôts de l'écosystème : ce registre deviendra
-`ROADMAP.md` à la racine, `docs/dev/` deviendra `dev/`. Plan, décisions et
-état par dépôt : `../../CARD_project/card/dev/plans/2026-11-06_layout-alignment.md`.
+# Feuille de route de stase (mise à jour 2026-11-06)
 
 ## `sampling_period` par série via dictionnaire
 

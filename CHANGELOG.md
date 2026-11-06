@@ -61,7 +61,19 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.5.
+### Documentation
+
+- **Les documents de développement prennent la structure commune aux
+  dépôts de l'écosystème (2026-11-06).** Le registre devient `ROADMAP.md`
+  à la racine ; `docs/dev/ORIGINE_R.md` et `RENAMING_PY.md` deviennent
+  `dev/r-origin.md` et `dev/renaming.md` ; l'archive cède la place à des
+  plans datés (`dev/plans/`) et au harnais R (`dev/r-harness/`). Les règles
+  du 2026-07-12 et la séparation d'avec les dépôts R passent, avec leurs
+  raisons, dans un nouveau `dev/decisions.md` ; le `CLAUDE.md` en garde
+  une ligne chacune. Rien ne change dans le code ni dans l'API. Le lien
+  du README vers les divergences avec le R suit le fichier : celui des
+  pages PyPI déjà publiées pointe vers l'ancien chemin. Campagne
+  commune : `../../CARD_project/card/dev/plans/2026-11-06_layout-alignment.md`.
 
 ## 0.6.5 (2026-09-18)
 

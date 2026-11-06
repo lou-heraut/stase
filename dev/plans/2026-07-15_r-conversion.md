@@ -1,4 +1,4 @@
-> Archive historique : copié de `EXstat_Claude/CLAUDE.md` le 2026-07-15,
+> **Statut : terminé le 2026-07-15.** Copié de `EXstat_Claude/CLAUDE.md`
 > à la clôture de la conversion. Document d'époque, non maintenu :
 > les chemins et noms (EXstat_py, process_extraction.py...) sont ceux
 > d'avant le renommage en stase. État courant : CLAUDE.md à la racine.

@@ -7,34 +7,25 @@ Python du package R **EXstat** : agrégation de chroniques journalières
 hydroclimatiques en variables temporelles (annuelles, saisonnières,
 mensuelles…) puis analyse de stationnarité (Mann-Kendall généralisé,
 pente de Sen). Il sert de **moteur de données** au package `card`
-(`CARD_project/card`), qui exécute les fiches CARD YAML.
+(`../../CARD_project/card`), qui exécute les fiches CARD YAML. Les
+dépôts R d'origine (`../EXstat/`, `../../CARD_project/CARD-R/`) restent
+sans fichiers IA : on y lit, on n'y dépose rien (`dev/decisions.md`).
 
-Repos liés (séparation actée le 2026-07-15 : les repos R restent
-« propres, sans IA » : référence de validation uniquement ; tout le
-travail IA se fait dans stase et card) :
-- `EXstat_project/EXstat/` : code R d'origine, en maintenance
-  (ne pas modifier, ne pas y ajouter de fichiers IA)
-- `CARD_project/card/` : consommateur de stase (son CHANGELOG.md trace
-  ce qui a changé de son côté) ; `CARD_project/CARD-R/` : R d'origine,
-  même statut que EXstat
-- `EXstat_project/EXstat_Claude/` : ancien dossier de travail de la
-  conversion (pas un repo git), désormais archivable. Son CLAUDE.md
-  historique est copié dans `docs/dev/archive/CONVERSION_R.md` et le
-  harnais de validation croisée dans `docs/dev/archive/harnais_R/` ; ses
-  CSVs de référence complets (`EXstat_py/ref_output/`, `ref_trend/`) se
-  régénèrent avec ces scripts
+## Où lire quoi
 
-Où lire quoi. Un rôle par fichier, chacun l'annonce dans un bandeau de
-statut en tête ; ne jamais recopier d'un fichier à l'autre, renvoyer.
-- `CHANGELOG.md` (racine) : ce qui a changé, quand, et où lire le détail.
-- docs/dev/, normes en vigueur : `ORIGINE_R.md` (origine R, validation,
-  divergences à ne jamais « corriger »), `RENAMING_PY.md` (noms R vers
-  Python).
-- docs/dev/archive/ : documents d'époque, non maintenus (`PLAN.md`,
-  `CONVERSION_R.md`, `harnais_R/`).
-- Ménage documentaire : la procédure est commune aux trois dépôts et vit
-  dans `../../CARD_project/card/docs/dev/NETTOYAGE.md`, avec l'état de la
-  campagne en cours. Rien à en recopier ici.
+Un rôle par fichier, chacun l'annonce dans un bandeau de statut en tête ;
+ne jamais recopier d'un fichier à l'autre, renvoyer.
+
+- `README.md` : ce que fait le moteur, et comment s'en servir.
+- `ROADMAP.md` : ce qui reste à faire.
+- `CHANGELOG.md` : ce qui a été fait, quand, et où lire le détail ; la
+  doctrine des versions est en tête.
+- `dev/decisions.md` : les règles du moteur avec leur date et leur raison.
+- `dev/r-origin.md` : origine R, validation croisée, et les divergences
+  intentionnelles à ne jamais « corriger ».
+- `dev/renaming.md` : la table des noms R vers Python, qui fait foi.
+- `dev/plans/` : plans datés, terminés (audit du 2026-07-12, conversion
+  R) ; `dev/r-harness/` : le harnais de validation croisée R, figé.
 
 ## Structure
 
@@ -69,56 +60,32 @@ docs/img/         # figures du README (déposées manuellement)
 >   fichiers que l'on a soi-même modifiés. Ce qui traîne dans l'arbre de
 >   travail appartient à l'utilisateur.
 
-## Règles du projet (décisions utilisateur, 2026-07-12)
+## Règles du projet
 
-1. **`tools.py` est gelé.** Port validé contre R (73/73). Aucune
-   modification sans accord explicite de l'utilisateur. Deux exceptions
-   ont été validées et faites le 2026-07-12 : rng/seed LTP
-   (reproductibilité des ex-æquo) et variance LTP par blocs (mémoire
-   bornée), toutes deux prouvées par tests d'équivalence dans
-   `tests/test_tools.py`. Interactions toujours permises : tests goldens,
-   documentation des limites, correction d'une vraie divergence de
-   résultat avec R (aucune connue).
-2. **Détection des colonnes par type, jamais par nom.** datetime → date,
-   texte → identifiant de série, numérique → valeurs. Ne jamais proposer
-   de paramètre `id_col=`/`date_col=`. Les problèmes de détection se
-   traitent par de meilleurs messages d'erreur.
-3. **Wording générique.** Jamais « station » dans les messages, la doc ou
-   le code : dire « série ». stase est agnostique du domaine.
-4. **Docstring d'une fonction PUBLIQUE** (tout ce que `stase.__all__`
-   annonce) : **anglais, sections NumPy**. C'est de la documentation,
-   pas un commentaire, et c'est la norme du Python scientifique. Mesuré
-   par `tests/test_docstrings.py`, qui porte les raisons. Même règle et
-   même garde dans card : les deux paquets s'installent et se lisent
-   ensemble, une norme qui s'arrêterait à la frontière de l'un ne
-   servirait à rien. La machinerie interne écrit dans la langue qu'elle
-   veut, elle s'adresse à qui ouvre le fichier.
-   **Le balisage du corps est du MARKDOWN**, pour tout le paquet : un
-   accent grave SIMPLE pour du code, aucun rôle `:func:`. Le style NumPy
-   est né pour Sphinx et sa syntaxe en ligne est du reST ; un
-   générateur moderne découpe les sections NumPy puis rend le corps en
-   Markdown, et le reST y ressort en clair. Normalisé le 2026-08-13 dans
-   les deux paquets, mesuré côté card par `tests/test_docstrings.py`.
-5. **Versions.** On n'y touche pas au quotidien. Chaînage à ne pas
-   rater, rappelé ici exprès : une modif notable se note sous
-   `## Non publié` du CHANGELOG ; publier se fait par
-   `scripts/set_version.py`, jamais à la main ; et si un changement du
-   moteur devient nécessaire à card (comme `param_cols` l'a été), il faut
-   bumper ICI **et** remonter la contrainte `stase>=` dans le pyproject
-   de card, sinon elle ment. Détail : « Versions et citation » plus bas.
+Décisions de l'utilisateur du 2026-07-12, détaillées avec leurs raisons
+dans `dev/decisions.md` :
+
+1. **`tools.py` est gelé** : aucune modification sans accord explicite.
+2. **Détection des colonnes par type, jamais par nom** : jamais de
+   paramètre `id_col=` / `date_col=`.
+3. **Wording générique** : « série », jamais « station ».
+4. **Docstring d'une fonction publique** : anglais, sections NumPy, corps
+   en Markdown (`tests/test_docstrings.py`).
+5. **Versions** : rien au quotidien sauf `## Non publié` ; publier par
+   `scripts/set_version.py`, jamais à la main.
 
 ## API
 
 Canonique : `stase.extract` et `stase.trend` (les noms de fonctions R
 restent en alias, mais paramètres et colonnes de sortie sont renommés
-sec : table dans docs/dev/RENAMING_PY.md ; la colonne de date de sortie
+sec : table dans `dev/renaming.md` ; la colonne de date de sortie
 reprend le nom de la colonne d'entrée). En interne, extraction.py et
 trend.py gardent les noms historiques via un pont en tête de fonction :
 ne pas « nettoyer » ce pont, il isole la logique validée par les
 goldens. Style : pas de préfixe redondant, pas de tiret quadratin (—) dans la
 prose, docs, messages ni réponses (marqueur de texte IA, rebute des
 utilisateurices : reformuler), références R limitées à une mention
-(docs/dev/ORIGINE_R.md).
+(`dev/r-origin.md`).
 
 ## Commandes
 
@@ -128,8 +95,8 @@ utilisateurices : reformuler), références R limitées à une mention
 cd ../../CARD_project/card && .python_env/bin/python -m pytest
 ```
 
-Environnement : `.python_env/` (pandas 3.0.3, numpy 2.5.1) ;
-dépendance déclarée pandas>=2.2 (include_groups, observed=).
+Environnement : `.python_env/` ; dépendance déclarée pandas>=2.2
+(include_groups, observed=).
 
 ## Versions et citation
 
@@ -156,10 +123,9 @@ Doctrine complète : « Versions, en cinq phrases », en tête de
   Heritage d'une révision git, calculable sans aucun appel d'API. Il ne
   résout que si le dépôt est archivé : fait le 2026-07-22 pour les trois,
   et SWH revisite tout seul ensuite. Rien à refaire par version.
-- **Exception** : si un changement du moteur devient nécessaire à card
-  (comme `param_cols` l'a été), bump ici ET remontée de la contrainte
-  `stase>=` dans le pyproject de card, sinon la contrainte ment.
-
+- **Un changement du moteur nécessaire à card** (comme `param_cols`) :
+  publier ici ET remonter `stase>=` dans le pyproject de card, sinon la
+  contrainte ment.
 
 ## Points d'architecture à connaître
 
@@ -187,6 +153,6 @@ Doctrine complète : « Versions, en cinq phrases », en tête de
 - Divergences R intentionnelles (NApct calendaire réel et seuil
   max_na_pct comparé au taux exact, grille matérialisée, bug yearday R
   non reproduit, précision MLE Hurst) : documentées dans
-  docs/dev/ORIGINE_R.md, ne pas « corriger ». Le détail historique
-  complet de la conversion est dans `docs/dev/archive/CONVERSION_R.md`
-  (archive de l'ancien `EXstat_Claude/CLAUDE.md`).
+  `dev/r-origin.md`, ne pas « corriger ». Le détail historique
+  complet de la conversion est dans `dev/plans/2026-07-15_r-conversion.md`
+  (l'ancien `EXstat_Claude/CLAUDE.md`).
