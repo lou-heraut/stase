@@ -17,19 +17,7 @@ authors:
     given-names: "Louis"
     email: "louis.heraut@inrae.fr"
     affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
-  - family-names: "Dorchies"
-    given-names: "David"
-    email: "david.dorchies@inrae.fr"
-    affiliation: "INRAE, UMR G-Eau, Montpellier, France"
-  - family-names: "Sauquet"
-    given-names: "Éric"
-    email: "eric.sauquet@inrae.fr"
-    affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
-  - family-names: "Vidal"
-    given-names: "Jean-Philippe"
-    email: "jean-philippe.vidal@inrae.fr"
-    affiliation: "INRAE, UR RiverLy, Villeurbanne, France"
-version: "0.6.6"
+version: "0.6.7"
 date-released: "2026-11-06"
 repository-code: "https://github.com/lou-heraut/stase"
 license: "GPL-3.0-or-later"
@@ -40,3 +28,15 @@ keywords:
   - pente de Sen
   - stationnarité
   - agrégation
+references:
+  - type: software
+    title: "EXstat"
+    notes: "Paquet R d'origine, dont stase est le portage Python. Contributeurs et rôles : fichier AUTHORS."
+    authors:
+      - family-names: "Héraut"
+        given-names: "Louis"
+      - family-names: "Renard"
+        given-names: "Benjamin"
+      - family-names: "Mansanarez"
+        given-names: "Valentin"
+    repository-code: "https://github.com/lou-heraut/EXstat"

@@ -61,7 +61,24 @@ tags commencent à 0.5.0.
 
 ## Non publié
 
-Rien depuis la 0.6.6.
+Rien depuis la 0.6.7.
+
+## 0.6.7 (2026-11-06)
+
+### Corrigé
+
+- **Les auteurs disent qui a fait quoi.** stase a un auteur, Louis
+  Héraut, qui a écrit ce paquet Python. Les fichiers de métadonnées le
+  disaient chacun différemment : PyPI annonçait comme auteurs Benjamin
+  Renard et Valentin Mansanarez, contributeurs du paquet R d'origine, et
+  `CITATION.cff` trois personnes qui ont aidé à la conception par la
+  discussion. L'auteur est désormais le même partout ; les contributions
+  au code R d'origine et à la conception sont listées avec leur rôle dans
+  `AUTHORS`, reprises en contributeurs dans `codemeta.json`, et le paquet
+  R d'origine est cité en référence dans `CITATION.cff`. Les mentions de
+  copyright en tête des fichiers source, qui disent qui détient des
+  droits sur le code, ne changent pas. La 0.6.6 reste sur PyPI avec
+  l'ancienne liste ; son code est identique.
 
 ## 0.6.6 (2026-11-06)
 

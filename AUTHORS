@@ -1,17 +1,20 @@
-# Authors list for the project
+# Authors of stase
 
-# Main Developer and Maintainer
+# Author and maintainer of the Python package
 Louis, Héraut, <louis.heraut@inrae.fr>*1
 
-# Other Developer
+# Contributors to the original R package EXstat, which stase ports
 Benjamin, Renard, <benjamin.renard@inrae.fr>*2
+    wrote the statistical part of the R code (trend tests), ported here
+    as tools.py
 Valentin, Mansanarez
+    formatted the R code
 
-# Other Contributors
-Éric, Sauquet, <eric.sauquet@inrae.fr>*1
+# Contributors to the design, through discussion
 Jean-Philippe, Vidal, <jean-philippe.vidal@inrae.fr>*1
+Éric, Sauquet, <eric.sauquet@inrae.fr>*1
+David, Dorchies, <david.dorchies@inrae.fr>*3
 Nathan, Pellerin, <nathan.pellerin@inrae.fr>*1
-David, Dorchies. <david.dorchies@inrae.fr>*3
 
 
 *1 INRAE, UR RiverLy, Villeurbanne, France

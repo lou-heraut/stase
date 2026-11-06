@@ -3,7 +3,7 @@
   "@type": "SoftwareSourceCode",
   "name": "stase",
   "description": "Moteur d'agrégation de séries journalières hydroclimatiques et d'analyse de stationnarité : Mann-Kendall généralisé (INDE, AR1, LTP) et pente de Sen. Port Python du paquet R EXstat.",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "datePublished": "2026-11-06",
   "codeRepository": "https://github.com/lou-heraut/stase",
   "issueTracker": "https://github.com/lou-heraut/stase/issues",
@@ -12,9 +12,36 @@
   "author": [
     {
       "@type": "Person",
-      "familyName": "Héraut",
       "givenName": "Louis",
+      "familyName": "Héraut",
       "email": "louis.heraut@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UR RiverLy, Villeurbanne, France"
+      }
+    }
+  ],
+  "contributor": [
+    {
+      "@type": "Person",
+      "givenName": "Benjamin",
+      "familyName": "Renard",
+      "email": "benjamin.renard@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, RECOVER, Aix-Marseille Université, Aix-en-Provence, France"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Valentin",
+      "familyName": "Mansanarez"
+    },
+    {
+      "@type": "Person",
+      "givenName": "Jean-Philippe",
+      "familyName": "Vidal",
+      "email": "jean-philippe.vidal@inrae.fr",
       "affiliation": {
         "@type": "Organization",
         "name": "INRAE, UR RiverLy, Villeurbanne, France"
@@ -22,18 +49,8 @@
     },
     {
       "@type": "Person",
-      "familyName": "Dorchies",
-      "givenName": "David",
-      "email": "david.dorchies@inrae.fr",
-      "affiliation": {
-        "@type": "Organization",
-        "name": "INRAE, UMR G-Eau, Montpellier, France"
-      }
-    },
-    {
-      "@type": "Person",
-      "familyName": "Sauquet",
       "givenName": "Éric",
+      "familyName": "Sauquet",
       "email": "eric.sauquet@inrae.fr",
       "affiliation": {
         "@type": "Organization",
@@ -42,9 +59,19 @@
     },
     {
       "@type": "Person",
-      "familyName": "Vidal",
-      "givenName": "Jean-Philippe",
-      "email": "jean-philippe.vidal@inrae.fr",
+      "givenName": "David",
+      "familyName": "Dorchies",
+      "email": "david.dorchies@inrae.fr",
+      "affiliation": {
+        "@type": "Organization",
+        "name": "INRAE, UMR G-Eau, Montpellier, France"
+      }
+    },
+    {
+      "@type": "Person",
+      "givenName": "Nathan",
+      "familyName": "Pellerin",
+      "email": "nathan.pellerin@inrae.fr",
       "affiliation": {
         "@type": "Organization",
         "name": "INRAE, UR RiverLy, Villeurbanne, France"

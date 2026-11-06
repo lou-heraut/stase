@@ -173,7 +173,7 @@ published work.
 
 ```
 Héraut L., Dorchies D., Sauquet É., Vidal J.-P. (2026). stase:
-statistical aggregation and stationarity evaluation (version 0.6.6).
+statistical aggregation and stationarity evaluation (version 0.6.7).
 Software Heritage: swh:1:rev:<commit>
 https://github.com/lou-heraut/stase
 ```
@@ -196,8 +196,10 @@ stase is the Python port of the R package
 [EXstat](https://github.com/lou-heraut/EXstat) (INRAE, UR RiverLy),
 validated number by number against R. The details of the validation and
 the documented divergences are in
-[dev/r-origin.md](https://github.com/lou-heraut/stase/blob/main/dev/r-origin.md). GPL-3 licence, authors in
-the AUTHORS file.
+[dev/r-origin.md](https://github.com/lou-heraut/stase/blob/main/dev/r-origin.md).
+GPL-3 licence. Author: Louis Héraut; the contributions to the original R
+code and to the design, with their roles, are listed in the
+[AUTHORS](https://github.com/lou-heraut/stase/blob/main/AUTHORS) file.
 
 ## Development
 
