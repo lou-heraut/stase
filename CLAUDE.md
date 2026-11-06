@@ -26,6 +26,8 @@ ne jamais recopier d'un fichier à l'autre, renvoyer.
 - `dev/renaming.md` : la table des noms R vers Python, qui fait foi.
 - `dev/plans/` : plans datés, terminés (audit du 2026-07-12, conversion
   R) ; `dev/r-harness/` : le harnais de validation croisée R, figé.
+- Principes documentaires communs aux quatre dépôts de l'écosystème :
+  `../../CARD_project/card/dev/decisions.md`.
 
 ## Structure
 
@@ -59,6 +61,14 @@ docs/img/         # figures du README (déposées manuellement)
 > - **Pas de `git add -A` ni de `git add .`** : stager nommément les
 >   fichiers que l'on a soi-même modifiés. Ce qui traîne dans l'arbre de
 >   travail appartient à l'utilisateur.
+> - **Ne JAMAIS signaler un fichier non suivi.** Un fichier non suivi est
+>   à l'utilisateur : brouillon, essai, sortie jetable. Il a le droit d'en
+>   avoir, il n'a pas à s'en justifier, et le lui rappeler est une
+>   nuisance. Pas de « au passage, j'ai vu que », pas de « je n'y touche
+>   pas », pas de récapitulatif en fin de réponse. On n'en parle que s'il
+>   en parle le premier. Le répertoire `bac/` est ignoré par git : c'est
+>   là qu'on lui propose de déposer ce qu'il veut faire disparaître du
+>   `git status`, une fois, sans y revenir.
 
 ## Règles du projet
 
